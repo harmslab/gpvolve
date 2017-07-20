@@ -1,4 +1,4 @@
-# GPEvolve
+# GPvolve
 
 A Python library for extracting evolutionary trajectories from large genotype-phenotype maps.
 

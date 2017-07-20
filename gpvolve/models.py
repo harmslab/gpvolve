@@ -22,5 +22,5 @@ def wright_fisher(genotypes, fitnesses, mu=1e-6, N=1e6, diploid=False):
     pi = np.nan_to_num((1-selection_matrix**a)/(1-(selection_matrix**(2*N))))
     W = 2 * a * mu * N * pi
     # Set the diagonal of the matrix to self probabilities
-    W[np.diag_indices_from(W)] = 1 - W.sum(axis=1)
+    W[np.diag_indices_from(W)] = 1.0 - W.sum(axis=1)
     return W
