@@ -1,5 +1,5 @@
 #!/Users/leandergoldbach/miniconda3/bin/python
-#
+
 # Author: Leander Goldbach
 #
 # -------------------------------------------------------------------------
