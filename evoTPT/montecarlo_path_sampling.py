@@ -17,7 +17,7 @@ import random
 # LOCAL IMPORTS
 # -------------------------------------------------------------------------
 
-from evoTPT.sampling import Sampling
+from evotpt.sampling import Sampling
 from gpmap import GenotypePhenotypeMap
 
 """MONTE CARLO SIMULATION"""

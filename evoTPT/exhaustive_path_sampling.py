@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 # LOCAL IMPORTS
 # -------------------------------------------------------------------------
 
-from evoTPT.sampling import Sampling
+from evotpt.sampling import Sampling
 from gpmap import GenotypePhenotypeMap
 
 class ExhaustiveSampling(Sampling):
