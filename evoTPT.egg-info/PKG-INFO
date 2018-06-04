@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: evoTPT
+Version: 0.1
+Summary: A Python API for applying transition path theory to genotype-phenotype maps
+Home-page: https://github.com/lgoldbach/evoTPT
+Author: Leander D. Goldbach
+Author-email: l.d.goldbach@students.uu.nl
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN

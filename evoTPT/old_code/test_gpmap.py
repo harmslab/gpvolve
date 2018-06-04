@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 import re
-
+import sys
 from gpmap.utils import encode_mutations, construct_genotypes, DNA
 from gpmap import GenotypePhenotypeMap
+import math
 
 from gpmap.simulate import MountFujiSimulation
 from gpgraph import GenotypePhenotypeGraph, draw_flattened
@@ -14,8 +15,10 @@ import networkx as nx
 from networkx import google_matrix
 from gpgraph.base import get_neighbors
 
-gpmapfile = "/Users/leandergoldbach/Utrecht/Minor/evobiophys/genotype-phenotype-maps/weinreich.json"
-filename = gpmapfile.split("/")[-1].split(".")[-2]
+gpmapfile = sys.argv[1]
+# filename = sys.argv[2]
+
+outfile = gpmapfile.split("/")[-1].split(".")[-2]
 
 '''
 # Wildtype sequence
@@ -69,12 +72,14 @@ gt_index = gpm.data.index[gpm.data['genotypes'] == '00001']
 
 
 G = GenotypePhenotypeGraph(gpm)
-for genotype in gpm.genotypes:
-    print(get_neighbors(genotype, gpm.mutations))
+
+# for genotype in gpm.genotypes:
+    # print(genotype)
+    # print(get_neighbors(genotype, gpm.mutations))
 
 network = draw_flattened(G, with_labes=True, node_size=100, font_size=7)
 
-plt.savefig("%s.pdf" % filename, format='pdf', dpi=300)
+plt.savefig("%s.pdf" % outfile, format='pdf', dpi=300)
 
 TM = google_matrix(G)
 
@@ -84,3 +89,5 @@ nodeslist = list(G.nodes.data())
 
 # print(TM[0,:])
 # print(TM[:,0])
+
+print((math.e ** -10000))
