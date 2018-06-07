@@ -10,12 +10,8 @@
 # OUTSIDE IMPORTS
 # -------------------------------------------------------------------------
 
-import pandas as pd
 import sys
 from scipy.stats import rv_discrete
-from operator import mul
-from functools import reduce
-import matplotlib.pyplot as plt
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS

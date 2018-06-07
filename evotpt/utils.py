@@ -25,24 +25,22 @@ from gpmap import GenotypePhenotypeMap
 from gpmap.utils import hamming_distance
 
 
-def count():
-    counts = []
-    for path in unique_sorted_paths():
-        counts.append(self.paths.count(path))
-    return tuple(counts)
+def signed_hamming_distance(self, current, proposed):
+    """Return the signed Hamming distance between equal-length sequences """
+    nonbinary = []
 
+    # Get non-binary version of the genotypes
+    for genotype in [current, proposed]:
+        # First: get index of binary genotype in the dataframe.
+        genotype_index = self.data.index[self.data['binary'] == genotype].tolist()
+        # Second: Pull out the corresponding binary from the dataframe and set as binary neighbor.
+        nonbinary.append(self.data.iloc[genotype_index[0]]['genotypes'])
 
-def sort_paths_by_id(self):
-    """Sort path  tuples by first to last position. """
-    # Example: [(0, 2, 13, 24), (0, 1, 28, 30), (0, 2, 15, 22)] -> [(0, 1, 28, 30), (0, 2, 13, 24), (0, 2, 15, 22)].
-    # Lamdba is an anonymous function that tells sorted() to take tup as input and then apply sorted on tup[:].
-    # i.e. sort by all elements in tup. key=lambda tup: tup[1] would only sort on the second element in the tuple.
-    sorted_pathlist = sorted(self.paths, key=lambda tup: tup[:])
+    # Count differences between wt and each genotype
+    current_to_wt = sum(ch1 != ch2 for ch1, ch2 in zip(nonbinary[0], self.wildtype))
+    proposed_to_wt = sum(ch1 != ch2 for ch1, ch2 in zip(nonbinary[1], self.wildtype))
+    # Get the signed hamming distance between the two genotypes.
+    # e.g. +1 if proposed states has one mutation more than the current state.
+    signed_hamming = proposed_to_wt - current_to_wt
 
-    return sorted_pathlist
-
-def unique_sorted_paths(self):
-    """ Return unique sorted list of path IDs """
-    uniq = list(set(self.paths))
-    uniq_sorted_pathlist = sorted(uniq, key=lambda tup: tup[:])
-    return uniq_sorted_pathlist
+    return signed_hamming

@@ -104,11 +104,10 @@ class Sampling(object):
         # Remove last interval because that won't be reached.
         lag_intervals.pop(-1)
 
-        plt.plot(lag_intervals, convergence, '--bo')
+        plt.plot(lag_intervals, convergence)
+        # plt.hlines(0, xmin=-1000, xmax=lag_intervals[-1]**2, color='black', linestyle=':', linewidth= 2)
         plt.savefig("%s_convergence.pdf" % self.outfilename, formar='pdf', dpi=300)
 
-
-        # Take filename without extension.
 
         # Output masterlog as a .json file.
         with open("%s.json" % self.outfilename, 'w') as outfile:
