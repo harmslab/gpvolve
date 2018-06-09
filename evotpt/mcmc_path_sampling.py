@@ -10,18 +10,15 @@
 # OUTSIDE IMPORTS
 # -------------------------------------------------------------------------
 
-import pandas as pd
 import sys
 from scipy.stats import rv_discrete
-from operator import mul
-from functools import reduce
-import matplotlib.pyplot as plt
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
 # -------------------------------------------------------------------------
 
 from evotpt.sampling import Sampling
+from evotpt import utils
 from gpmap import GenotypePhenotypeMap
 
 
@@ -45,7 +42,12 @@ class MarkovChainMonteCarlo(Sampling):
         self.null_steps = null_steps
 
         # Get transition matrix
-        self.tm = self.transition_matrix()
+        self.tm = utils.transition_matrix(self.data,
+                                          self.wildtype,
+                                          self.mutations,
+                                          self.pop_size,
+                                          self.null_steps,
+                                          self.reversibility)
 
         print("Reverse steps allowed: %s. Default: True" % reversibility)
 

@@ -72,10 +72,15 @@ class MonteCarloAnalysis(object):
         """ Return unique sorted list of path IDs """
         uniq = list(set(self.paths))
         uniq_sorted_pathlist = sorted(uniq, key=lambda tup: tup[:])
+        c = 0
+        for i in uniq_sorted_pathlist:
+            c += 1
+            print("Path %s: %s, length: %s" % (c, i, len(i)))
+
         return uniq_sorted_pathlist
 
 
 path_sample = MonteCarloAnalysis(sys.argv[1])
 print("Number of unique Paths: %s" % len(path_sample.unique_sorted_paths()))
 path_sample.histogram()
-print(path_sample.unique_sorted_paths())
+# print(path_sample.unique_sorted_paths())
