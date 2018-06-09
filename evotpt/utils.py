@@ -210,3 +210,8 @@ def signed_hamming_distance(wildtype, current, proposed):
 
     return signed_hamming
 
+def unique_sorted_paths(paths):
+    """ Return unique sorted list of path IDs """
+    uniq = list(set(paths))
+    uniq_sorted_pathlist = sorted(uniq, key=lambda tup: tup[:])
+    return uniq_sorted_pathlist

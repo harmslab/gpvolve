@@ -75,7 +75,7 @@ class Sampling(object):
         # each lag interval.
         lag_intervals = [100]
         lag_k = 100
-        prev_dict = {}
+        prev_path_counts = {}
         convergence = []
 
         # Iterate self.sample and add every resulting path to masterlog.
@@ -83,34 +83,40 @@ class Sampling(object):
         for i in range(1, int(iterations)+1):
             log = self.simulate()
             masterlog[str(i)] = log
-
+            # print("Path %s: %s" % (i, masterlog[str(i)]["path"]))
             paths.append(tuple(log["path"]))
 
+            # CONVERGENCE
             if i == lag_intervals[-1]:
-                print("Path %s: %s" % (i, masterlog[str(i)]["path"]))
-                # Once the last interval is reached, add the next interval, i.e. last interval + lag k.
+                # Once the latest interval is reached, add the next interval, i.e. last interval + lag k.
                 lag_intervals.append(lag_intervals[-1] + lag_k)
+                # Create empty dictionary for current path counts.
+                curr_path_counts = {}
+                # Get the path counts since the last counting, i.e last lag_interval.
+                path_counts = self.count(paths[-lag_k:])
 
-                # Get the pmf after i amount of steps as.
-                curr_dict = self.pmf(paths)
-
-                euclid_dist = 0
-                # Calc. euclidean distance of each path in current pmf to pmf at step current - k (current - previous).
-                for path in curr_dict:
+                # Add the new counts to the previous counts to get the current path counts.
+                for path, count in path_counts.items():
                     try:
-                        euclid_dist += abs(curr_dict[path] - prev_dict[path])
-                    # If new path has been sampled since current step - k, euclidean distance equals prob. of that path.
+                        curr_path_counts[path] = prev_path_counts[path] + count
+                    # If a new path has been sampled since the previous counting, add the new path to the dictionary.
                     except KeyError:
-                        euclid_dist += curr_dict[path]
+                        curr_path_counts[path] = count
 
-                convergence.append(euclid_dist)
-                # Set current pmf as previous pmf.
-                prev_dict = curr_dict
+                print(prev_path_counts, curr_path_counts)
+                print(self.euclidean_distance(self.pmf(prev_path_counts, i-lag_k), self.pmf(curr_path_counts, i)))
+
+                # CONVERGENCE CRITERION: Euclidean distance between current probability mass function (pmf) and the
+                # previous pmf.
+                convergence.append(self.euclidean_distance(self.pmf(prev_path_counts, i-lag_k), self.pmf(curr_path_counts, i)))
+
+                # Set the current path counts as previous path counts before starting the next iteration.
+                prev_path_counts = curr_path_counts
+
         # Remove last interval because that won't be reached.
         lag_intervals.pop(-1)
-
+        # Plot convergence and save as .pdf file in current working directiory.
         plt.plot(lag_intervals, convergence)
-        # plt.hlines(0, xmin=-1000, xmax=lag_intervals[-1]**2, color='black', linestyle=':', linewidth= 2)
         plt.savefig("%s_convergence.pdf" % self.outfilename, format='pdf', dpi=300)
 
 
@@ -120,25 +126,29 @@ class Sampling(object):
 
         return masterlog
 
+    def euclidean_distance(self, prev_pmf, current_pmf):
+        euclid_dist = 0
+        # Calc. euclidean distance of each path in current pmf to pmf at step current - k (current - previous).
+        for path in current_pmf:
+            try:
+                euclid_dist += abs(current_pmf[path] - prev_pmf[path])
+            # If a new path has been sampled since last lag interval, euclidean distance = prob. of that path.
+            except KeyError:
+                euclid_dist += current_pmf[path]
+        return euclid_dist
 
-    def pmf(self, paths):
+    def pmf(self, path_counts, total_count):
         dict = {}
-        counts, paths = self.count(paths)
-        counts_sum = sum(counts)
-        for path, count in zip(paths, counts):
-            dict[path] = count/counts_sum
-        # pmf = [count/counts_sum for count in counts]
+        try:
+            for path, count in path_counts.items():
+                dict[path] = count/total_count
+        except ZeroDivisionError:
+                dict[path] = 0
         return dict
 
     def count(self, paths):
-        counts = []
-        uniq_paths = self.unique_sorted_paths(paths)
+        dict = {}
+        uniq_paths = utils.unique_sorted_paths(paths)
         for path in uniq_paths:
-            counts.append(paths.count(path))
-        return tuple(counts), uniq_paths
-
-    def unique_sorted_paths(self, paths):
-        """ Return unique sorted list of path IDs """
-        uniq = list(set(paths))
-        uniq_sorted_pathlist = sorted(uniq, key=lambda tup: tup[:])
-        return uniq_sorted_pathlist
+            dict[path] = paths.count(path)
+        return dict
