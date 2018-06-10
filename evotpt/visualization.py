@@ -83,21 +83,28 @@ class GenotypePhenotypeGraph(object):
             x = 0
             # Get unique list of neighbors and set coordinates for each.
 
-            for neighbor in list(set(neighborlist)):
+            for neighbor in sorted(list(set(neighborlist))):
                 node_coordinates[neighbor] = [x, y]
                 temp_node_list.append(neighbor)
                 x += 1
             # Align nodes to center/wildtype.
             for node_ in temp_node_list:
-                print(node_, len(temp_node_list))
                 node_coordinates[node_][0] = node_coordinates[node_][0] - ((len(temp_node_list)-1) / 2)
             # Update nodelist
             nodelist = temp_node_list
         return node_coordinates
 
     def draw_map(self):
-        for node, coordinates in self.define_xy_coordinates().items():
-            plt.scatter(*coordinates)
+        node_coordinates = self.define_xy_coordinates()
+        for node, coordinates in node_coordinates.items():
+            neighbors = list(utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=False))
+            for neighbor in neighbors:
+                # print(coordinates, node_coordinates[neighbor])
+                # x_y = list(zip(coordinates, node_coordinates[neighbor]))
+                x = [coordinates[0], node_coordinates[neighbor][0]]
+                y = [coordinates[1], node_coordinates[neighbor][1]]
+                plt.plot(x, y, '-', color='grey', linewidth=1, zorder=0)
+            plt.scatter(*coordinates, zorder=10, color='blue', s=50)
 
         # Invert y-axis
         plt.gca().invert_yaxis()
