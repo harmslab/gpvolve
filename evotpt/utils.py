@@ -183,6 +183,11 @@ def max_phenotype(gpm_data):
     max_phen = max(gpm_data.phenotypes)
     return max_phen
 
+def min_phenotype(gpm_data):
+    """Get the highest phenotype"""
+    min_phen = min(gpm_data.phenotypes)
+    return min_phen
+
 def relative_phenotype(gpm_data, phenotype):
     """Calculate the relative phenotype using the highest phenotypes as reference"""
     rel_phen = phenotype/max_phenotype(gpm_data)

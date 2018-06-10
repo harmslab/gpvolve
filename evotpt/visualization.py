@@ -19,6 +19,7 @@ import json
 import sys
 from operator import mul
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
@@ -95,20 +96,56 @@ class GenotypePhenotypeGraph(object):
         return node_coordinates
 
     def draw_map(self):
+        # Get dicitonary with color for each node and choose color map
+        colors = self.colors()
+        cmap = plt.cm.get_cmap('plasma')
+
         node_coordinates = self.define_xy_coordinates()
         for node, coordinates in node_coordinates.items():
             neighbors = list(utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=False))
             for neighbor in neighbors:
                 # print(coordinates, node_coordinates[neighbor])
                 # x_y = list(zip(coordinates, node_coordinates[neighbor]))
-                x = [coordinates[0], node_coordinates[neighbor][0]]
-                y = [coordinates[1], node_coordinates[neighbor][1]]
+                x = list(zip(coordinates, node_coordinates[neighbor]))[0]
+                y = list(zip(coordinates, node_coordinates[neighbor]))[1]
+                # Draw lines between neighbors
                 plt.plot(x, y, '-', color='grey', linewidth=1, zorder=0)
-            plt.scatter(*coordinates, zorder=10, color='blue', s=50)
+
+            # Get color for node from colors dictionary.
+            color = cmap(colors[node])
+            # Draw nodes.
+            plt.scatter(*coordinates, color=color, zorder=1, s=300)
+            # Add genotype labels for node.
+            plt.annotate(node, coordinates, size=5, ha='center', va='center', zorder=2)
 
         # Invert y-axis
         plt.gca().invert_yaxis()
         plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
+
+    def colors(self):
+        # Define a color value between 0 and 1 for each phenotype,
+        # where the smallest and largest phenotype are 0 and 1, respectively.
+
+        phenotypes = {}
+        phenotype_list = []
+
+        # Get all phenotypes
+        for genotype in self.data.genotypes:
+            pheno = utils.get_phenotype(self.data, genotype)
+            phenotype_list.append(pheno)
+            phenotypes[genotype] = pheno
+
+        # Define smallest phenotype and largest phenotypes.
+        min_phe = min(phenotype_list)
+        max_phe = max(phenotype_list)
+
+        color_values = {}
+        for genotype, phen in phenotypes.items():
+            # By substracting smallest phenotype and dividing by largest genotype(-smallest phenotype),
+            # all phenotypes are mapped onto a scale of 0 to 1.
+            color_values[genotype] = (phen - min_phe) / (max_phe - min_phe)
+
+        return color_values
 
 gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
 gpraph = GenotypePhenotypeGraph(gpm)
