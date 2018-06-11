@@ -31,10 +31,15 @@ from evotpt.sampling import utils
 
 
 class GenotypePhenotypeGraph(object):
-    def __init__(self, gpm=None, mutant=None):
+    def __init__(self, gpm, sampling_results=None, mutant=None):
         # Read genotype-phenotype map
         self.read_gpm(gpm)
 
+        # Read sampling results of respective map
+        self.pmf = self.read_sampling_results(sampling_results)
+
+        self.fluxes = self.flux(self.pmf)
+        print(self.fluxes)
         # Set filename.
         self.outfilename = sys.argv[1].split(".")[0].split("/")[-1]
 
@@ -65,6 +70,13 @@ class GenotypePhenotypeGraph(object):
         genotype_index = self.data.index[self.data['genotypes'] == self.wildtype].tolist()
         # Second: Pull out the corresponding binary from the dataframe and set as binary wildtype.
         self.binary_wildtype = self.data.iloc[genotype_index[0]]['binary']
+
+    def read_sampling_results(self, jsonfile):
+        f = open(jsonfile, "r")
+        data = json.load(f)
+        pmf = data['pmf']
+
+        return pmf
 
 
     def define_xy_coordinates(self):
@@ -104,12 +116,15 @@ class GenotypePhenotypeGraph(object):
         for node, coordinates in node_coordinates.items():
             neighbors = list(utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=False))
             for neighbor in neighbors:
+                linewidth = 0
+                if tuple([node, neighbor]) in self.fluxes:
+                    linewidth = self.fluxes[tuple([node,neighbor])]
                 # print(coordinates, node_coordinates[neighbor])
                 # x_y = list(zip(coordinates, node_coordinates[neighbor]))
                 x = list(zip(coordinates, node_coordinates[neighbor]))[0]
                 y = list(zip(coordinates, node_coordinates[neighbor]))[1]
                 # Draw lines between neighbors
-                plt.plot(x, y, '-', color='grey', linewidth=1, zorder=0)
+                plt.plot(x, y, '-', color='grey', linewidth=linewidth*8, zorder=0)
 
             # Get color for node from colors dictionary.
             color = cmap(colors[node])
@@ -117,6 +132,8 @@ class GenotypePhenotypeGraph(object):
             plt.scatter(*coordinates, color=color, zorder=1, s=300)
             # Add genotype labels for node.
             plt.annotate(node, coordinates, size=5, ha='center', va='center', zorder=2)
+
+
 
         # Invert y-axis
         plt.gca().invert_yaxis()
@@ -147,7 +164,20 @@ class GenotypePhenotypeGraph(object):
 
         return color_values
 
+    def flux(self, pmf):
+        dict = {}
+        for path_str, prob in pmf.items():
+            path = tuple(path_str.split(","))
+            for i in range(1, len(path)):
+                step = (path[i-1],path[i])
+                try:
+                    dict[step] += prob
+                except KeyError:
+                    dict[step] = prob
+        return dict
+
+
 gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-gpraph = GenotypePhenotypeGraph(gpm)
+gpraph = GenotypePhenotypeGraph(gpm, sys.argv[2])
 
 gpraph.draw_map()

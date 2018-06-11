@@ -68,7 +68,7 @@ class Sampling(object):
         masterlog = {}
         random.seed(random_seed)
         masterlog["random_seed"] = random_seed
-        paths = []
+        masterlog["paths"] = []
 
         # Lag intervals saves the steps at which convergence measurement was taken; Lag k defines interval size;
         # Previous dictionary resembles the pmf at step 0; Convergence saves the euclidean distances between pmf at
@@ -82,9 +82,7 @@ class Sampling(object):
         # self.simulate is defined in the descending Class, e.g. mcmc_path_sampling.py
         for i in range(1, int(iterations)+1):
             log = self.simulate()
-            masterlog[str(i)] = log
-            # print("Path %s: %s" % (i, masterlog[str(i)]["path"]))
-            paths.append(tuple(log["path"]))
+            masterlog['paths'].append(tuple(log["path"]))
 
             # CONVERGENCE
             if i == lag_intervals[-1]:
@@ -93,7 +91,7 @@ class Sampling(object):
                 # Create empty dictionary for current path counts.
                 curr_path_counts = {}
                 # Get the path counts since the last counting, i.e last lag_interval.
-                path_counts = self.count(paths[-lag_k:])
+                path_counts = self.count(masterlog['paths'][-lag_k:])
 
                 # Add the new counts to the previous counts to get the current path counts.
                 for path, count in path_counts.items():
@@ -102,9 +100,6 @@ class Sampling(object):
                     # If a new path has been sampled since the previous counting, add the new path to the dictionary.
                     except KeyError:
                         curr_path_counts[path] = count
-
-                print(prev_path_counts, curr_path_counts)
-                print(self.euclidean_distance(self.pmf(prev_path_counts, i-lag_k), self.pmf(curr_path_counts, i)))
 
                 # CONVERGENCE CRITERION: Euclidean distance between current probability mass function (pmf) and the
                 # previous pmf.
@@ -119,6 +114,11 @@ class Sampling(object):
         plt.plot(lag_intervals, convergence)
         plt.savefig("%s_convergence.pdf" % self.outfilename, format='pdf', dpi=300)
 
+        # Add probability mass function of all sampled paths to masterlog.
+        pmf = {}
+        for path, prob in self.pmf(self.count(masterlog['paths']), len(masterlog['paths'])).items():
+            pmf[",".join(path)] = prob
+        masterlog['pmf'] = pmf
 
         # Output masterlog as a .json file.
         with open("%s.json" % self.outfilename, 'w') as outfile:

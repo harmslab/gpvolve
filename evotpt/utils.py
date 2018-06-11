@@ -94,7 +94,6 @@ def get_neighbors(gpm_data, wildtype, binarygenotype, mutations, reversibility=F
     - Turns non-binary neighbors into binary and returns as tuple.
 
     """
-
     # Get non-binary version of genotype:
     # First: get index of genotype in the dataframe.
     binarygenotype_index = gpm_data.index[gpm_data['binary'] == binarygenotype].tolist()
@@ -119,11 +118,14 @@ def get_neighbors(gpm_data, wildtype, binarygenotype, mutations, reversibility=F
             neighbors += (genotype2_,)
 
     for neighbor in neighbors:
-        # Get binary version of neighbor:
-        # First: get index of neighbor in the dataframe.
-        neighbor_index = gpm_data.index[gpm_data['genotypes'] == neighbor].tolist()
-        # Second: Pull out the corresponding binary from the dataframe and set as binary neighbor.
-        binaryneighbors.append(gpm_data.iloc[neighbor_index[0]]['binary'])
+        try:
+            # Get binary version of neighbor:
+            # First: get index of neighbor in the dataframe.
+            neighbor_index = gpm_data.index[gpm_data['genotypes'] == neighbor].tolist()
+            # Second: Pull out the corresponding binary from the dataframe and set as binary neighbor.
+            binaryneighbors.append(gpm_data.iloc[neighbor_index[0]]['binary'])
+        except IndexError:
+            pass
 
     if reversibility == False:
         irrev_binarymutants = []
