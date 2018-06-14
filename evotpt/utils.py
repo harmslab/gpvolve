@@ -27,7 +27,7 @@ from gpmap import GenotypePhenotypeMap
 from gpmap.utils import hamming_distance
 
 
-def transition_matrix(gpm_data, wildtype, mutations, population_size, null_steps=False, reversibility=False):
+def transition_matrix(gpm_data, wildtype, mutations, population_size, mutation_rate=1, null_steps=False, reversibility=False):
     """ Create transition NxN matrix where N is the number of genotypes """
 
     data = gpm_data
@@ -45,16 +45,21 @@ def transition_matrix(gpm_data, wildtype, mutations, population_size, null_steps
             next_state = list(df)[column]
             current_phen = get_phenotype(gpm_data, current_state)
             next_phen = get_phenotype(gpm_data, next_state)
+            neighbors = get_neighbors(gpm_data, wildtype, current_state, mutations, reversibility)
 
             # Calculate fixation probability if the next state is a neighbor of the current state.
-            if next_state in get_neighbors(gpm_data, wildtype, current_state, mutations, reversibility):
-                df.ix[row, column] = max(0, fixation_probability(gpm_data, current_phen, next_phen, population_size))
+            if next_state in neighbors:
+                #df.ix[row, column] = population_size * mutation_rate * max(0.,
+                                                                           # fixation_probability(gpm_data, current_phen,
+                                                                           #                      next_phen,
+                                                                           #                      population_size))
+                df.ix[row, column] = max(0., fixation_probability_moran(gpm_data, current_phen, next_phen, population_size))/len(neighbors)
                 if current_phen < next_phen:
                     pass
 
             # If next state is not a neighbor, transition probability is 0.
             else:
-                df.ix[row, column] = 0
+                df.ix[row, column] = 0.
 
     # Update probabilities depending on whether residing at current state is allowed.
     # Loop over rows
@@ -63,22 +68,25 @@ def transition_matrix(gpm_data, wildtype, mutations, population_size, null_steps
         # Get sum of probabilities in row. P(i->i) is still set to 0.
         sum_of_prob = sum(column for column in df.ix[row, :])
 
-
         # If residing in current state is allowed, P(i->i), i.e. remaining in current state, is 1 - sum_of_prob.
         if null_steps == True:
-            df.ix[row, row] = 1 - sum_of_prob
+            df.ix[row, row] = max(0., 1 - sum_of_prob)
 
         # If residing in current state is not allowed, P(i->i) remains 0.
-        # All other probabilities (P(i->j)) are adjusted so they sum to 1.
         elif null_steps == False:
-            for column in range(0, len(df.ix[row, :])):
-                trans_probab = df.ix[row, column]
+            pass
 
-                # Adjust probability so the sum of all P(i->j) equals 1.
-                try:
-                    df.ix[row, column] = trans_probab/sum_of_prob
-                except ZeroDivisionError:
-                    df.ix[row, column] = 0
+        sum_of_prob = sum(column for column in df.ix[row, :])
+
+        # All probabilities are adjusted so they sum to 1.
+        for column in range(0, len(df.ix[row, :])):
+            trans_probab = df.ix[row, column]
+
+            # Adjust probability so the sum of all P(i->j) equals 1.
+            try:
+                df.ix[row, column] = trans_probab/sum_of_prob
+            except ZeroDivisionError:
+                df.ix[row, column] = 0.
     return df
 
 
@@ -143,6 +151,17 @@ def fixation_probability(gpm_data, current, proposed, pop_size):
     # Calculate fixation probability.
     # fix_prob = 1 - e ** (-1 - rel_current / rel_proposed) / 1 - e ** (-pop_size * (1 - rel_current / rel_proposed)
     fix_prob = 1 - e ** -((rel_proposed / rel_current) - 1) / 1 - e ** -pop_size * ((rel_proposed / rel_current) - 1)
+    # print("Current: %s, Proposed: %s\nFixation Probability: %s" % (rel_current, rel_proposed, fix_prob))
+    return fix_prob
+
+def fixation_probability_moran(gpm_data, current, proposed, pop_size):
+    """Calculate the fixation probability based on a model by Gillespie, Gillespie, 2010, JHU press."""
+    # Get relative phenotypes.
+    rel_current, rel_proposed = relative_phenotype(gpm_data, current), relative_phenotype(gpm_data, proposed)
+
+    # Calculate fixation probability.
+    # fix_prob = 1 - e ** (-1 - rel_current / rel_proposed) / 1 - e ** (-pop_size * (1 - rel_current / rel_proposed)
+    fix_prob = (1 - (rel_current / rel_proposed)) / (1 - (rel_current / rel_proposed)**pop_size)
     # print("Current: %s, Proposed: %s\nFixation Probability: %s" % (rel_current, rel_proposed, fix_prob))
     return fix_prob
 
