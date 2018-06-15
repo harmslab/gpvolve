@@ -36,7 +36,7 @@ def tpt(tm):
     # we can compute the following properties from either dense or sparse T
     # stationary dist
     mu = stationary_distribution(T)
-
+    print(mu)
     # forward committor
     qplus = forward_committor(T, A, B)
     # # backward committor given that the matrix is reversible.
@@ -153,7 +153,7 @@ gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
 tm = utils.transition_matrix(gpm.data,
                              gpm.wildtype,
                              gpm.mutations,
-                             population_size=5,
+                             population_size=100,
                              mutation_rate=1,
                              null_steps=True,
                              reversibility=True)

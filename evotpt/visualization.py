@@ -31,7 +31,7 @@ from evotpt.sampling import utils
 
 
 class GenotypePhenotypeGraph(object):
-    def __init__(self, gpm, flux_data, flux=None, mutant=None):
+    def __init__(self, gpm, flux_data=None, flux=None, mutant=None):
         """Flux has to be either flux='matrix' where matrix is a .txt containing a 2D numpy array (tpt output) or
         flux='pmf' where pmf is a probability mass function dictionary of monte carlo sampled paths."""
 
@@ -44,7 +44,7 @@ class GenotypePhenotypeGraph(object):
             self.fluxes = self.flux(self.pmf)
 
         elif flux == 'matrix':
-            self.pmf = self.read_matrix(flux_data)
+            self.fluxes = self.read_matrix(flux_data)
 
         elif flux == None:
             print(
@@ -93,9 +93,38 @@ class GenotypePhenotypeGraph(object):
         return pmf
 
     def read_matrix(self, txtfile):
-        f = np.loadtxt(txtfile)
-        print(f)
-        return f
+        M = np.loadtxt(txtfile)
+        matrix = self.normalize_matrix(M)
+        dict = {}
+        for row_index, row in enumerate(matrix):
+            genotype_i = self.data.at[row_index, 'genotypes']
+
+            # Sum the probabilities leading to the current state(row)
+            if row_index == 0:
+                arriv_prob = 1
+                # Probability of arriving at the first state is set to 1 (source)
+            else:
+                arriv_prob = sum(matrix[:, row_index])
+
+            for col_index, flux in enumerate(row):
+                if flux > 0:
+                    genotype_j = self.data.at[col_index, 'genotypes']
+                    """Probability of going from genotype i to j is the probability flux between times the probability
+                    of arriving at i in the first place. Normalize flux to 1 --> this neglects the flux that is 
+                    "staying" at the node which is acceptable because that stationary probability "flow" is not captured
+                     in the flux map anyway."""
+                    dict[(genotype_i, genotype_j)] = flux * arriv_prob
+        print(dict)
+        return dict
+
+    def normalize_matrix(self, matrix):
+        # normalize matrix so that all rows sum to 1.
+        for row_index, row in enumerate(matrix):
+            row_sum = sum(row)
+            for col_index, flux in enumerate(row):
+                if row_sum > 0:
+                    matrix[row_index, col_index] = flux/row_sum
+        return matrix
 
     def define_xy_coordinates(self):
         y = 0
@@ -138,11 +167,11 @@ class GenotypePhenotypeGraph(object):
                 linewidth = 0
                 if tuple([node, neighbor]) in self.fluxes:
                     linewidth = self.fluxes[tuple([node, neighbor])]
-                # print(coordinates, node_coordinates[neighbor])
-                # x_y = list(zip(coordinates, node_coordinates[neighbor]))
+
                 x = list(zip(coordinates, node_coordinates[neighbor]))[0]
                 y = list(zip(coordinates, node_coordinates[neighbor]))[1]
                 # Draw lines between neighbors
+                print(linewidth)
                 plt.plot(x, y, '-', color='grey', linewidth=linewidth * 8, zorder=0)
 
             # Get color for node from colors dictionary.
@@ -191,10 +220,11 @@ class GenotypePhenotypeGraph(object):
                     dict[step] += prob
                 except KeyError:
                     dict[step] = prob
+        print(dict)
         return dict
 
 
 gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-gpraph = GenotypePhenotypeGraph(gpm, sys.argv[2], flux='matrix')
+gpraph = GenotypePhenotypeGraph(gpm, sys.argv[2], flux=sys.argv[3])
 
 gpraph.draw_map()

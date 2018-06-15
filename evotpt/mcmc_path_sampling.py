@@ -88,7 +88,7 @@ class MarkovChainMonteCarlo(Sampling):
 
 gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
 markov_chain = MarkovChainMonteCarlo(gpm, outputfile=sys.argv[2],
-                                     population_size=10000,
+                                     population_size=100,
                                      reversibility=False, null_step=False)
 
 markov_chain.sample(sys.argv[3], 1234)

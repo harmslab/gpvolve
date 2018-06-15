@@ -81,6 +81,8 @@ class Sampling(object):
         # Iterate self.sample and add every resulting path to masterlog.
         # self.simulate is defined in the descending Class, e.g. mcmc_path_sampling.py
         for i in range(1, int(iterations)+1):
+            print("Path %s" %i)
+
             log = self.simulate()
             masterlog['paths'].append(tuple(log["path"]))
 
