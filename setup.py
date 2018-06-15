@@ -1,11 +1,11 @@
-#!/Users/leandergoldbach/miniconda3/bin/python
+#/Users/leandergoldbach/miniconda3/bin/python
 
 from setuptools import setup
 
 # Package meta-data.
-NAME = 'evoTPT'
+NAME = 'evotpt'
 DESCRIPTION = 'A Python API for applying transition path theory to genotype-phenotype maps'
-URL = 'https://github.com/lgoldbach/evoTPT'
+URL = 'https://github.com/lgoldbach/evotpt'
 EMAIL = 'l.d.goldbach@students.uu.nl'
 AUTHOR = 'Leander D. Goldbach'
 REQUIRES_PYTHON = '>=3.3.0'
@@ -20,6 +20,6 @@ setup(
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,
-    packages=['evoTPT'],
+    packages=['evotpt'],
     license='MIT'
     )   
