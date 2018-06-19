@@ -33,7 +33,6 @@ class Sampling(object):
     def __init__(self, gpm=None, mutant=None):
         self.read_gpm(gpm)
 
-
         # Set mutant. Default: The furthest genotypes from wildtype by hamming-distance.
         if mutant == None:
             self.mutant = utils.furthest_genotypes(self.data, self.wildtype, self.data.genotypes)[0]
@@ -62,8 +61,8 @@ class Sampling(object):
         self.binary_wildtype = self.data.iloc[genotype_index[0]]['binary']
 
     def sample(self, iterations, random_seed):
+        print("SAMPLE")
         """Sample paths by iterating self.simulate. Save output as .json file"""
-
         # Create masterlog dictionary, a list for all paths sampled and add random seed to dictionary
         masterlog = {}
         random.seed(random_seed)
@@ -113,7 +112,15 @@ class Sampling(object):
         # Remove last interval because that won't be reached.
         lag_intervals.pop(-1)
         # Plot convergence and save as .pdf file in current working directiory.
-        plt.plot(lag_intervals, convergence)
+        f = plt.figure(figsize=(11,5))
+        ax1 = f.add_subplot(111)
+        ax1.axhline(y=0, color='black', linewidth=1)
+        ax1.plot(lag_intervals, convergence, 'ro-')
+        ax1.set_title("Convergence")
+        ax1.set_xlabel("Number of paths sampled")
+        ax1.set_ylabel("Euclid. distance of prob. distibution\nIntervals = %s" %lag_k)
+        plt.tight_layout()
+
         plt.savefig("%s_convergence.pdf" % self.outfilename, format='pdf', dpi=300)
 
         # Add probability mass function of all sampled paths to masterlog.
@@ -125,8 +132,7 @@ class Sampling(object):
         # Output masterlog as a .json file.
         with open("%s.json" % self.outfilename, 'w') as outfile:
             json.dump(masterlog, outfile, sort_keys=True, indent=4)
-
-        return masterlog
+        return masterlog['pmf']
 
     def euclidean_distance(self, prev_pmf, current_pmf):
         euclid_dist = 0

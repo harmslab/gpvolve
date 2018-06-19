@@ -100,43 +100,8 @@ class ExhaustiveSampling(Sampling):
 
         return(path_probs_products, pathlist)
 
-
-
-gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-exhaustive_sampling = ExhaustiveSampling(gpm, outputfile=sys.argv[2], population_size=10000, null_steps=False)
-exhaustive_sampling.plot()
-
-#
-# def path_probabilities(self):
-#     pathprobs = []
-#     pathlist = []
-#     for path in self.all_paths():
-#         print(path)
-#         fixationprobs = []
-#         pathlist.append(path)
-#         for genotype in range(0, len(path) - 1):
-#             print(genotype)
-#             fixationprobs.append(max(0, self.fixation_probability(self.get_phenotype(path[genotype]),
-#                                                                   self.get_phenotype(path[genotype + 1]),
-#                                                                   self.pop_size)))
-#         print(fixationprobs)
-#         # This takes into account the probability of occurring. Divide by the number of competing neighbors.
-#         actual_transition_probs = []
-#         for prob, genotype in zip(fixationprobs, path):
-#             actual_transition_probs.append(prob / len(self.get_neighbors(genotype)))
-#         # Normalize transition probabilities in case of null_steps==False, i.e. no staying at current genotype.
-#         print(actual_transition_probs)
-#         normalized_transition_probs = []
-#         for prob in actual_transition_probs:
-#             normalized_transition_probs.append(prob / sum(actual_transition_probs))
-#         # print(normalized_transition_probs)
-#         pathprobs.append(reduce(mul, actual_transition_probs, 1))
-#
-#     # print("Pathprobs:",pathprobs)
-#     # print(len(pathlist))
-#     normalized_pathprobs = []
-#     for probs in pathprobs:
-#         normalized_pathprobs.append(probs / len(pathlist))
-#     # print(normalized_transition_probs)
-#
-#     return pathprobs, pathlist
+if __name__ == "__main__":
+    # execute only if run as a script
+    gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
+    exhaustive_sampling = ExhaustiveSampling(gpm, outputfile=sys.argv[2], population_size=10000, null_steps=False)
+    exhaustive_sampling.plot()

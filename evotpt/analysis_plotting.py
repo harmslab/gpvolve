@@ -80,7 +80,6 @@ class MonteCarloAnalysis(object):
         return uniq_sorted_pathlist
 
 
-path_sample = MonteCarloAnalysis(sys.argv[1])
-print("Number of unique Paths: %s" % len(path_sample.unique_sorted_paths()))
-path_sample.histogram()
-# print(path_sample.unique_sorted_paths())
+# path_sample = MonteCarloAnalysis(sys.argv[1])
+# print("Number of unique Paths: %s" % len(path_sample.unique_sorted_paths()))
+# path_sample.histogram()

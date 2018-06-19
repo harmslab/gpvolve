@@ -24,13 +24,14 @@ from gpmap import GenotypePhenotypeMap
 
 """MARKOV CHAIN MONTE CARLO SIMULATION"""
 
-class MarkovChainMonteCarlo(Sampling):
+class MarkovChain(Sampling):
     """Class for sampling paths from genotype-phenotype map using the monte carlo method"""
-    def __init__(self, gpm, outputfile, population_size, reversibility=True, null_steps=False, **kwargs):
+    def __init__(self, gpm, population_size, outputfile=None, reversibility=True, null_steps=False, **kwargs):
         Sampling.__init__(self, gpm)
 
         # Set filename.
-        self.outfilename = outputfile.split(".")[0]
+        if outputfile is not None:
+            self.outfilename = outputfile.split(".")[0]
 
         # Set population size.
         self.pop_size = population_size
@@ -52,6 +53,7 @@ class MarkovChainMonteCarlo(Sampling):
         print("Reverse steps allowed: %s. Default: True" % reversibility)
 
     def simulate(self):
+        """Monte Carlo"""
         tm = self.tm
 
         # Get column names from transition matrix, i.e. all genotypes in transition matrix order)
@@ -86,9 +88,12 @@ class MarkovChainMonteCarlo(Sampling):
         # Return the whole path.
         return log
 
-gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-markov_chain = MarkovChainMonteCarlo(gpm, outputfile=sys.argv[2],
-                                     population_size=100,
-                                     reversibility=False, null_step=False)
+if __name__ == "__main__":
+    # execute only if run as a script
 
-markov_chain.sample(sys.argv[3], 1234)
+    gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
+    markov_chain = MarkovChain(gpm, outputfile=sys.argv[2],
+                                         population_size=10,
+                                         reversibility=False, null_step=False)
+
+    markov_chain.sample(sys.argv[3], 1234)

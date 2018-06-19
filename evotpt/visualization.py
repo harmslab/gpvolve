@@ -20,6 +20,7 @@ import sys
 from operator import mul
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from math import pi
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
@@ -38,17 +39,26 @@ class GenotypePhenotypeGraph(object):
         # Read genotype-phenotype map
         self.read_gpm(gpm)
 
+        if __name__ == "__main__":
+            sys_input = True
+        else:
+            sys_input = False
+
         if flux == 'pmf':
             # Read sampling results of respective map
-            self.pmf = self.read_pmf(flux_data)
+            if sys_input == True:
+                self.pmf = self.read_pmf(flux_data)
+            else:
+                self.pmf = flux_data
             self.fluxes = self.flux(self.pmf)
-
         elif flux == 'matrix':
+            if sys_input == True:
+                with open(flux_data) as f:
+                    flux_data = np.loadtxt(f)
             self.fluxes = self.read_matrix(flux_data)
-
-        elif flux == None:
-            print(
-                "Define the type of flux input as third argument:\nflux='matrix' (numpy array .txt) or flux='pmf' dictionary .json")
+        else:
+            # print("Define the type of flux input as third argument:\nflux='matrix' (numpy array .txt) or flux='pmf' dictionary .json")
+            pass
 
         # Set filename.
         self.outfilename = sys.argv[1].split(".")[0].split("/")[-1]
@@ -61,6 +71,42 @@ class GenotypePhenotypeGraph(object):
 
         # Define trajectory length.
         self.traject_length = utils.signed_hamming_distance(self.wildtype, self.wildtype, self.mutant)
+
+    def draw_map(self, figsize=(5,5), node_size=18, linewidth=15):
+        # Get dicitonary with color for each node and choose color map
+        colors = self.colors()
+        cmap = plt.cm.get_cmap('plasma')
+
+        f, ax = plt.subplots(figsize=figsize)
+        # Invert axis
+        ax.invert_yaxis()
+        # Remove axes
+        ax.axis('off')
+
+        node_coordinates = self.define_xy_coordinates()
+        for node, coordinates in node_coordinates.items():
+            neighbors = list(utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=True))
+            for neighbor in neighbors:
+                flux = 0
+                if tuple([node, neighbor]) in self.fluxes:
+                    flux = self.fluxes[tuple([node, neighbor])]
+                    print(node, neighbor, flux)
+                x = list(zip(coordinates, node_coordinates[neighbor]))[0]
+                y = list(zip(coordinates, node_coordinates[neighbor]))[1]
+                # Draw lines between neighbors
+                ax.plot(x, y, '-', color='black', linewidth=linewidth * flux, zorder=0)
+
+            # Get color for node from colors dictionary.
+            color = cmap(colors[node])
+            # Draw nodes.
+            ax.scatter(*coordinates, color=color, zorder=1, s=pi*node_size**2)
+            # Add genotype labels for node.
+            ax.annotate(node, coordinates, size=node_size / 2, weight='medium', ha='center', va='center', zorder=2)
+
+        if __name__ == "__main__":
+            plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
+        else:
+            plt.show()
 
     def read_gpm(self, gpm):
         """Assign GenotypePhenotypeMaps properties to variables"""
@@ -87,34 +133,19 @@ class GenotypePhenotypeGraph(object):
         to match the genotypes in the data set that is used to build all nodes"""
         f = open(jsonfile, "r")
         data = json.load(f)
-        print(data['pmf'])
         pmf = data['pmf']
 
         return pmf
 
-    def read_matrix(self, txtfile):
-        M = np.loadtxt(txtfile)
-        matrix = self.normalize_matrix(M)
+    def read_matrix(self, flux_matrix):
+        matrix = flux_matrix
         dict = {}
         for row_index, row in enumerate(matrix):
             genotype_i = self.data.at[row_index, 'genotypes']
-
-            # Sum the probabilities leading to the current state(row)
-            if row_index == 0:
-                arriv_prob = 1
-                # Probability of arriving at the first state is set to 1 (source)
-            else:
-                arriv_prob = sum(matrix[:, row_index])
-
             for col_index, flux in enumerate(row):
                 if flux > 0:
                     genotype_j = self.data.at[col_index, 'genotypes']
-                    """Probability of going from genotype i to j is the probability flux between times the probability
-                    of arriving at i in the first place. Normalize flux to 1 --> this neglects the flux that is 
-                    "staying" at the node which is acceptable because that stationary probability "flow" is not captured
-                     in the flux map anyway."""
-                    dict[(genotype_i, genotype_j)] = flux * arriv_prob
-        print(dict)
+                    dict[(genotype_i, genotype_j)] = flux
         return dict
 
     def normalize_matrix(self, matrix):
@@ -155,36 +186,6 @@ class GenotypePhenotypeGraph(object):
             nodelist = temp_node_list
         return node_coordinates
 
-    def draw_map(self):
-        # Get dicitonary with color for each node and choose color map
-        colors = self.colors()
-        cmap = plt.cm.get_cmap('plasma')
-
-        node_coordinates = self.define_xy_coordinates()
-        for node, coordinates in node_coordinates.items():
-            neighbors = list(utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=False))
-            for neighbor in neighbors:
-                linewidth = 0
-                if tuple([node, neighbor]) in self.fluxes:
-                    linewidth = self.fluxes[tuple([node, neighbor])]
-
-                x = list(zip(coordinates, node_coordinates[neighbor]))[0]
-                y = list(zip(coordinates, node_coordinates[neighbor]))[1]
-                # Draw lines between neighbors
-                print(linewidth)
-                plt.plot(x, y, '-', color='grey', linewidth=linewidth * 8, zorder=0)
-
-            # Get color for node from colors dictionary.
-            color = cmap(colors[node])
-            # Draw nodes.
-            plt.scatter(*coordinates, color=color, zorder=1, s=300)
-            # Add genotype labels for node.
-            plt.annotate(node, coordinates, size=5, ha='center', va='center', zorder=2)
-
-        # Invert y-axis
-        plt.gca().invert_yaxis()
-        plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
-
     def colors(self):
         # Define a color value between 0 and 1 for each phenotype,
         # where the smallest and largest phenotype are 0 and 1, respectively.
@@ -220,11 +221,11 @@ class GenotypePhenotypeGraph(object):
                     dict[step] += prob
                 except KeyError:
                     dict[step] = prob
-        print(dict)
         return dict
 
+if __name__ == "__main__":
+    # execute only if run as a script
+    gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
+    gpraph = GenotypePhenotypeGraph(gpm, flux_data=sys.argv[2], flux=sys.argv[3])
 
-gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-gpraph = GenotypePhenotypeGraph(gpm, sys.argv[2], flux=sys.argv[3])
-
-gpraph.draw_map()
+    gpraph.draw_map()

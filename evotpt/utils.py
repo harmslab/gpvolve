@@ -18,6 +18,7 @@ from scipy.stats import rv_discrete
 from operator import mul
 from functools import reduce
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
@@ -49,10 +50,10 @@ def transition_matrix(gpm_data, wildtype, mutations, population_size, mutation_r
 
             # Calculate fixation probability if the next state is a neighbor of the current state.
             if next_state in neighbors:
-                #df.ix[row, column] = population_size * mutation_rate * max(0.,
-                                                                           # fixation_probability(gpm_data, current_phen,
-                                                                           #                      next_phen,
-                                                                           #                      population_size))
+                # df.ix[row, column] = population_size * mutation_rate * max(0.,
+                #                                                            fixation_probability(gpm_data, current_phen,
+                #                                                                                 next_phen,
+                #                                                                                 population_size))
                 df.ix[row, column] = max(0., fixation_probability_moran(gpm_data, current_phen, next_phen, population_size))/len(neighbors)
                 if current_phen < next_phen:
                     pass
@@ -240,3 +241,39 @@ def unique_sorted_paths(paths):
     uniq = list(set(paths))
     uniq_sorted_pathlist = sorted(uniq, key=lambda tup: tup[:])
     return uniq_sorted_pathlist
+
+def plot_pmf(pmf):
+    # Plots probability distribution of a pmf, pmf is a dictionary(keys=paths, values=probabilities)
+    paths = []
+    probs = []
+    for path, probability in pmf.items():
+        paths.append(path)
+        probs.append(probability)
+    zipped = zip(paths, probs)
+    sorted_paths = sorted(zipped, key=lambda x: x[0])
+    num_of_paths = len(sorted_paths)
+    f, ax = plt.subplots(figsize=(11, 5))
+    ax.bar([i for i in range(1, num_of_paths+1)],[pair[1] for pair in sorted_paths])
+    ax.set_title("Probability Distribution of Paths")
+    ax.set_ylabel("Probability")
+
+    # Bar labels
+    for label in range(1, num_of_paths+1):
+        ax.text(label, -0.01, label, ha='center', va='top', fontsize=(300*(1/num_of_paths)))
+    plt.xticks([])
+    plt.tight_layout()
+
+    plt.show()
+
+if __name__ == "__main__":
+    # execute only if run as a script
+    gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
+    tm = transition_matrix(gpm.data,
+                           gpm.wildtype,
+                           gpm.mutations,
+                           population_size=10,
+                           mutation_rate=1,
+                           null_steps=True,
+                           reversibility=True)
+
+    print(tm)
