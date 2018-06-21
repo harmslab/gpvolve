@@ -40,8 +40,8 @@ def tpt(tm):
     qplus = forward_committor(T, A, B)
     # # backward committor given that the matrix is reversible.
     qminus = 1.0 - qplus
-    qminus = backward_committor(T, A, B)
-
+    # qminus = backward_committor(T, A, B)
+    print(qplus)
     # print(qplus)
     # print(mu)
     # gross flux
@@ -53,9 +53,7 @@ def tpt(tm):
 
 
     tot_flux = total_flux(grossflux)
-    # print(tot_flux)
-
-    print(np.transpose(grossflux))
+    print(tot_flux)
     print(grossflux)
     return netflux
 
@@ -73,6 +71,8 @@ def stationary_distribution(T):
     return mu
 
 def forward_committor(T, A, B):
+    """The forward committor u(x) between sets A and B is the probability
+    for the chain starting in x to reach B before reaching A."""
     X = set(range(T.shape[0]))
     A = set(A)
     B = set(B)
@@ -97,7 +97,7 @@ def forward_committor(T, A, B):
     r = np.zeros(T.shape[0])
     """Equation (III)"""
     r[list(B)] = 1.0
-
+    print("L", L, "\n", "W", W, "\n", "r", r)
     u = solve(W, r)
     return u
 
@@ -249,5 +249,6 @@ if __name__ == "__main__":
                                  mutation_rate=1,
                                  null_steps=True,
                                  reversibility=True)
+    print(tm)
 
     tpt(tm)

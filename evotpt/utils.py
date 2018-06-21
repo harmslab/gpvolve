@@ -156,7 +156,6 @@ def fixation_probability(gpm_data, current, proposed, pop_size):
     return fix_prob
 
 def fixation_probability_moran(gpm_data, current, proposed, pop_size):
-    """Calculate the fixation probability based on a model by Gillespie, Gillespie, 2010, JHU press."""
     # Get relative phenotypes.
     rel_current, rel_proposed = relative_phenotype(gpm_data, current), relative_phenotype(gpm_data, proposed)
 
@@ -268,12 +267,28 @@ def plot_pmf(pmf):
 if __name__ == "__main__":
     # execute only if run as a script
     gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-    tm = transition_matrix(gpm.data,
-                           gpm.wildtype,
-                           gpm.mutations,
-                           population_size=10,
-                           mutation_rate=1,
-                           null_steps=True,
-                           reversibility=True)
+    # tm = transition_matrix(gpm.data,
+    #                        gpm.wildtype,
+    #                        gpm.mutations,
+    #                        population_size=10000,
+    #                        mutation_rate=0.1,
+    #                        null_steps=True,
+    #                        reversibility=True)
+    # print(tm)
+    cmap = plt.cm.get_cmap('plasma')
+    markers = ['--', '-bo', '-v', '-s', '-x', '-x']
+    for i, pop_size in enumerate([1, 10, 100, 868, 1000, 10000]):
+        x, y = [], []
+        for proposed_fitn in np.arange(0.1, 5, 0.05):
+            y.append(fixation_probability_moran(gpm.data, 1, proposed_fitn, pop_size=pop_size))
+            x.append(proposed_fitn-1)
+        y_at_xzero = y[x.index(min([abs(xi) for xi in x]))]
+        plt.plot(x, y, markers[i], markersize=2, color=cmap((1 / len(markers)) * i))
+        plt.text(0, y_at_xzero, "%s" % pop_size)
+    plt.axvline(0, linewidth=0.5, color="black", linestyle="--", zorder=0)
+    plt.axhline(0, linewidth=0.5, color="black", linestyle="-", zorder=0)
+    plt.show()
+    # plt.savefig("fixation_probability_plot.pdf", format='pdf', dpi=300)
 
-    print(tm)
+
+
