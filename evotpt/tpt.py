@@ -25,7 +25,7 @@ from evotpt import utils
 from gpmap import GenotypePhenotypeMap
 
 
-def tpt(tm):
+def transition_path_theory(tm):
     # Transform pandas transition matrix into numpy array. Required for subsequent matrix operations.
     T = np.array(tm, dtype=float)
     A = [0]
@@ -40,23 +40,19 @@ def tpt(tm):
     qplus = forward_committor(T, A, B)
     # # backward committor given that the matrix is reversible.
     qminus = 1.0 - qplus
-    qminus = backward_committor(T, A, B)
-
+    # qminus = backward_committor(T, A, B)
     # print(qplus)
     # print(mu)
     # gross flux
     grossflux = flux_matrix(T, mu, qminus, qplus, netflux=False)
-
+    # print(qplus)
     # filename = sys.argv[1].split("/")[-1].split(".")[0]
     # np.savetxt('%s_flux.txt' % filename, grossflux)
     netflux = to_netflux(grossflux)
 
-
+    print(netflux)
     tot_flux = total_flux(grossflux)
-    # print(tot_flux)
-
-    print(np.transpose(grossflux))
-    print(grossflux)
+    print(tot_flux)
     return netflux
 
 def stationary_distribution(T):
@@ -73,6 +69,8 @@ def stationary_distribution(T):
     return mu
 
 def forward_committor(T, A, B):
+    """The forward committor u(x) between sets A and B is the probability
+    for the chain starting in x to reach B before reaching A."""
     X = set(range(T.shape[0]))
     A = set(A)
     B = set(B)
@@ -97,7 +95,6 @@ def forward_committor(T, A, B):
     r = np.zeros(T.shape[0])
     """Equation (III)"""
     r[list(B)] = 1.0
-
     u = solve(W, r)
     return u
 
@@ -245,9 +242,10 @@ if __name__ == "__main__":
     tm = utils.transition_matrix(gpm.data,
                                  gpm.wildtype,
                                  gpm.mutations,
-                                 population_size=10,
+                                 population_size=50,
                                  mutation_rate=1,
                                  null_steps=True,
                                  reversibility=True)
+    print(tm)
 
-    tpt(tm)
+    transition_path_theory(tm)

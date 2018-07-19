@@ -19,6 +19,7 @@ from operator import mul
 from functools import reduce
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+import decimal as D
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
@@ -28,7 +29,7 @@ from gpmap import GenotypePhenotypeMap
 from gpmap.utils import hamming_distance
 
 
-def transition_matrix(gpm_data, wildtype, mutations, population_size, mutation_rate=1, null_steps=False, reversibility=False):
+def transition_matrix(gpm_data, wildtype, mutations, population_size, minval=0, mutation_rate=1, null_steps=False, reversibility=False):
     """ Create transition NxN matrix where N is the number of genotypes """
 
     data = gpm_data
@@ -49,14 +50,18 @@ def transition_matrix(gpm_data, wildtype, mutations, population_size, mutation_r
             neighbors = get_neighbors(gpm_data, wildtype, current_state, mutations, reversibility)
 
             # Calculate fixation probability if the next state is a neighbor of the current state.
-            if next_state in neighbors:
+            if next_state in neighbors and next_state != current_state:
                 # df.ix[row, column] = population_size * mutation_rate * max(0.,
                 #                                                            fixation_probability(gpm_data, current_phen,
                 #                                                                                 next_phen,
                 #                                                                                 population_size))
-                df.ix[row, column] = max(0., fixation_probability_moran(gpm_data, current_phen, next_phen, population_size))/len(neighbors)
-                if current_phen < next_phen:
-                    pass
+                if population_size == 1:
+                    df.ix[row, column] = 1/len(neighbors)
+                else:
+                    df.ix[row, column] = max(0., minval + fixation_probability_moran(gpm_data, current_phen, next_phen, population_size))/len(neighbors)
+
+                # if current_phen < next_phen:
+                #     pass
 
             # If next state is not a neighbor, transition probability is 0.
             else:
@@ -156,10 +161,10 @@ def fixation_probability(gpm_data, current, proposed, pop_size):
     return fix_prob
 
 def fixation_probability_moran(gpm_data, current, proposed, pop_size):
-    """Calculate the fixation probability based on a model by Gillespie, Gillespie, 2010, JHU press."""
     # Get relative phenotypes.
     rel_current, rel_proposed = relative_phenotype(gpm_data, current), relative_phenotype(gpm_data, proposed)
-
+    # print("Current:", rel_current, "Proposed:", rel_proposed)
+    # print((rel_current / rel_proposed)**pop_size)
     # Calculate fixation probability.
     # fix_prob = 1 - e ** (-1 - rel_current / rel_proposed) / 1 - e ** (-pop_size * (1 - rel_current / rel_proposed)
     fix_prob = (1 - (rel_current / rel_proposed)) / (1 - (rel_current / rel_proposed)**pop_size)
@@ -268,12 +273,28 @@ def plot_pmf(pmf):
 if __name__ == "__main__":
     # execute only if run as a script
     gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-    tm = transition_matrix(gpm.data,
-                           gpm.wildtype,
-                           gpm.mutations,
-                           population_size=10,
-                           mutation_rate=1,
-                           null_steps=True,
-                           reversibility=True)
+    # tm = transition_matrix(gpm.data,
+    #                        gpm.wildtype,
+    #                        gpm.mutations,
+    #                        population_size=10000,
+    #                        mutation_rate=0.1,
+    #                        null_steps=True,
+    #                        reversibility=True)
+    # print(tm)
+    cmap = plt.cm.get_cmap('plasma')
+    markers = ['--', '-bo', '-v', '-s', '-x', '-x']
+    for i, pop_size in enumerate([1, 2, 5, 10, 50, 100, 868, 1000, 10000, 1000000]):
+        x, y = [], []
+        for proposed_fitn in np.arange(0.1, 5, 0.05):
+            y.append(fixation_probability_moran(gpm.data, 1, proposed_fitn, pop_size=pop_size))
+            x.append(proposed_fitn-1)
+        y_at_xzero = y[x.index(min([abs(xi) for xi in x]))]
+        plt.plot(x, y, markersize=2, color=cmap((1 / len(markers)) * i))
+        plt.text(0, y_at_xzero, "%s" % pop_size)
+    plt.axvline(0, linewidth=0.5, color="black", linestyle="--", zorder=0)
+    plt.axhline(0, linewidth=0.5, color="black", linestyle="-", zorder=0)
+    plt.show()
+    plt.savefig("fixation_probability_plot.pdf", format='pdf', dpi=300)
 
-    print(tm)
+
+
