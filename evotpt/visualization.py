@@ -90,7 +90,6 @@ class GenotypePhenotypeGraph(object):
                 flux = 0
                 if tuple([node, neighbor]) in self.fluxes:
                     flux = self.fluxes[tuple([node, neighbor])]
-                    print(node, neighbor, flux)
                 x = list(zip(coordinates, node_coordinates[neighbor]))[0]
                 y = list(zip(coordinates, node_coordinates[neighbor]))[1]
                 # Draw lines between neighbors
@@ -106,7 +105,10 @@ class GenotypePhenotypeGraph(object):
         if __name__ == "__main__":
             plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
         else:
+            plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
             plt.show()
+
+        return f, ax
 
     def read_gpm(self, gpm):
         """Assign GenotypePhenotypeMaps properties to variables"""
@@ -213,14 +215,22 @@ class GenotypePhenotypeGraph(object):
 
     def flux(self, pmf):
         dict = {}
-        for path_str, prob in pmf.items():
-            path = tuple(path_str.split(","))
+        for path, prob in pmf.items():
+            if type(path) == str:
+                # If key is str, turn into tuple
+                path = tuple(path.split(","))
+            elif type(path) == tuple:
+                pass
+            else:
+                print("Dict. keys must be tuples or strings not %s" % type(path))
+                sys.exit(1)
             for i in range(1, len(path)):
                 step = (path[i - 1], path[i])
                 try:
                     dict[step] += prob
                 except KeyError:
                     dict[step] = prob
+
         return dict
 
 if __name__ == "__main__":
