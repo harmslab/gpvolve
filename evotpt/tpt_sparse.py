@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division
 import warnings
-import numpy as np
 import pandas as pd
 import numpy as np
 import sys
@@ -33,12 +32,14 @@ import decimal as D
 from evotpt.visualization import GenotypePhenotypeGraph
 from evotpt.analysis_plotting import MonteCarloAnalysis
 from evotpt import utils
-from evotpt import tpt
+from evotpt import tpt_analysis
 from gpmap import GenotypePhenotypeMap
 
 def transition_path_theory(tm):
     # Transform pandas transition matrix into numpy array. Required for subsequent matrix operations.
-    T = np.array(tm, dtype=float)
+
+    #T = np.array(tm, dtype=float)
+    T = tm
     A = [0]
     B = [len(T) - 1]
 
@@ -523,22 +524,24 @@ def min_sparse(X):
 if __name__ == "__main__":
     # execute only if run as a script
     gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-    tm = utils.transition_matrix(gpm.data,
-                                 gpm.wildtype,
-                                 gpm.mutations,
-                                 population_size=50,
+    tm = utils.transition_matrix(gpm,
+                                 population_size=100,
                                  minval=0,
                                  mutation_rate=1,
                                  null_steps=False,
                                  reversibility=True)
+
     print("TM\n", tm)
     flux_matrix, A, B = transition_path_theory(tm)
     print("FM\n", flux_matrix)
     paths, capacities = pathways(flux_matrix, A, B)
 
-    pmf = path_to_pmf(paths, capacities)
-    print("Paths:\n", pmf)
+    path_pmf = path_to_pmf(paths, capacities)
+    print("Paths:\n", path_pmf)
 
-    flux_map = GenotypePhenotypeGraph(gpm, pmf, flux='pmf')
+    flux_map = GenotypePhenotypeGraph(gpm, path_pmf, flux='pmf')
 
-    flux_map.draw_map(figsize=(10, 8), node_size=18, linewidth=15)
+    flux_map.draw_map(figsize=(6, 6), node_size=18, linewidth=15)
+
+    print(tpt_analysis.number_of_paths(path_pmf))
+    print(len(tpt_analysis.adaptive_paths(gpm, path_pmf)))

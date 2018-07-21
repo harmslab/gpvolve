@@ -85,7 +85,7 @@ class GenotypePhenotypeGraph(object):
 
         node_coordinates = self.define_xy_coordinates()
         for node, coordinates in node_coordinates.items():
-            neighbors = list(utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=True))
+            neighbors = list(utils.get_neighb(self.data, self.wildtype, node, self.mutations, reversibility=True))
             for neighbor in neighbors:
                 flux = 0
                 if tuple([node, neighbor]) in self.fluxes:
@@ -106,7 +106,7 @@ class GenotypePhenotypeGraph(object):
             plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
         else:
             plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
-            plt.show()
+            # plt.show()
 
         return f, ax
 
@@ -173,7 +173,7 @@ class GenotypePhenotypeGraph(object):
             # Get all the genotypes that have exactly one more mutation than the current genotypes.
             for node in nodelist:
                 neighborlist = neighborlist + list(
-                    utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=False))
+                    utils.get_neighb(self.data, self.wildtype, node, self.mutations, reversibility=False))
             x = 0
             # Get unique list of neighbors and set coordinates for each.
 

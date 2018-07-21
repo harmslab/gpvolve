@@ -27,7 +27,7 @@ from gpmap import GenotypePhenotypeMap
 
 def transition_path_theory(tm):
     # Transform pandas transition matrix into numpy array. Required for subsequent matrix operations.
-    T = np.array(tm, dtype=float)
+    T = tm
     A = [0]
     B = [len(T)-1]
     ### ALL CODE BELOW IS COPIED FROM OR INSPIRED BY https://github.com/markovmodel/msmtools/blob/devel/msmtools/flux/api.py
@@ -239,9 +239,7 @@ def flux_production(F):
 if __name__ == "__main__":
     # execute only if run as a script
     gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-    tm = utils.transition_matrix(gpm.data,
-                                 gpm.wildtype,
-                                 gpm.mutations,
+    tm = utils.transition_matrix(gpm,
                                  population_size=50,
                                  mutation_rate=1,
                                  null_steps=True,
