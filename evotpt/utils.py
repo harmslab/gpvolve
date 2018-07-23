@@ -43,11 +43,15 @@ def transition_matrix(gpm, population_size, minval=0, mutation_rate=1, null_step
     P = sparse.csr_matrix((phen, (row, col)), shape=(ax, ax))
 
     """TRANSITION MATRIX"""
-    P_T = P.T
-
-    R = sparse.csr_matrix(P / P_T)
-
     """Phenotype ratio matrix"""
+
+    P_T = P.T
+    # dense
+    R = P / P_T # dividing two sparse matrices returns dense matrix, why?
+    #sparse
+    R[np.isnan(R)] = 0
+    R = sparse.csr_matrix(R)
+
     # bra = np.ones((len(gpm.binary), 1), int)
     # M = np.outer(gpm.phenotypes, bra)
     # print(M)
@@ -89,7 +93,7 @@ def transition_matrix(gpm, population_size, minval=0, mutation_rate=1, null_step
     """Replace nan with 0"""
     T[np.isnan(T)] = 0
 
-    return T
+    return T, R
 
 
 def transition_matrix_old(gpm_data, wildtype, mutations, population_size, minval=0, mutation_rate=1, null_steps=False, reversibility=False):

@@ -524,24 +524,32 @@ def min_sparse(X):
 if __name__ == "__main__":
     # execute only if run as a script
     gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
-    tm = utils.transition_matrix(gpm,
-                                 population_size=100,
+    tm, ratio_matrix = utils.transition_matrix(gpm,
+                                 population_size=150,
                                  minval=0,
                                  mutation_rate=1,
                                  null_steps=False,
                                  reversibility=True)
 
-    print("TM\n", tm)
     flux_matrix, A, B = transition_path_theory(tm)
-    print("FM\n", flux_matrix)
+    # print("FM\n", flux_matrix)s
     paths, capacities = pathways(flux_matrix, A, B)
-
     path_pmf = path_to_pmf(paths, capacities)
-    print("Paths:\n", path_pmf)
-
+    # print("Paths:\n", path_pmf)
     flux_map = GenotypePhenotypeGraph(gpm, path_pmf, flux='pmf')
 
     flux_map.draw_map(figsize=(6, 6), node_size=18, linewidth=15)
 
-    print(tpt_analysis.number_of_paths(path_pmf))
-    print(len(tpt_analysis.adaptive_paths(gpm, path_pmf)))
+    number_of_paths = tpt_analysis.number_of_paths(path_pmf)
+
+    ap_pmf = tpt_analysis.adaptive_paths(gpm, path_pmf)
+    non_ap_pmf = tpt_analysis.non_adaptive_paths(path_pmf, ap_pmf)
+    sinks = tpt_analysis.sinks(ratio_matrix)
+    peaks = tpt_analysis.peaks(ratio_matrix)
+    chains = tpt_analysis.chains(ratio_matrix)
+    print(peaks, sinks)
+    print(chains)
+    path_diff = tpt_analysis.path_difference(ap_pmf, fraction=0.4)
+    length_distr = tpt_analysis.length_distr(ap_pmf)
+
+    non_adpv_flux = tpt_analysis.non_adaptive_flux(path_pmf, ap_pmf)
