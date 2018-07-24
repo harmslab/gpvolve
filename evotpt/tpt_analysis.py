@@ -31,18 +31,24 @@ def adaptive_paths(gpm, pmf):
     for path, prob in pmf.items():
         phens = [utils.get_phenotype(gpm.data, gt) for gt in path]
         # if the minimum phenotype is not at position 0, then the path is not adaptive
-        minm = min(phens)
-        minima = [i for i, x in enumerate(phens) if x == minm]
-        if phens.index(min(phens)) == 0 and len(minima) == 1:
+        adaptive = True
+        for i, ph in enumerate(phens):
+            if ph != phens[-1] and phens[i+1] < ph:
+                adaptive = False
+                break
+        if adaptive == True:
             ap_pmf[path] = prob
     return ap_pmf
 
 def non_adaptive_paths(pmf, ap_pmf):
     non_ap_pmf = {}
-    for path, prob in pmf.items():
-        if path not in ap_pmf:
-            non_ap_pmf[path] = prob
-    return non_ap_pmf
+    if ap_pmf == False:
+        return pmf
+    else:
+        for path, prob in pmf.items():
+            if path not in ap_pmf:
+                non_ap_pmf[path] = prob
+        return non_ap_pmf
 
 def sinks(ratio_matrix):
     R = ratio_matrix[:]
@@ -66,9 +72,7 @@ def chains(ratio_matrix):
     R = ratio_matrix[:]
     R[R > 1] = 0
     chains = []
-    print(R)
     for i, row in enumerate(R):
-        print(R[i])
         if R[i].count_nonzero() == 1:
             # get edge: row = 1, column = the nonzero entry of row R[i]
             chains.append((i, R[i].nonzero()[1][0]))
@@ -105,7 +109,7 @@ def path_difference(pmf, fraction=1):
 
         avg_div_per_gt = X.sum(axis=1)/len(f_paths)
 
-        path_smlty[step] = (sum(avg_div_per_gt)/len(avg_div_per_gt))/gt_lngh
+        path_smlty[step+1] = (sum(avg_div_per_gt)/len(avg_div_per_gt))/gt_lngh
 
     return path_smlty
 
@@ -118,9 +122,3 @@ def length_distr(pmf):
 def non_adaptive_flux(pmf, ap_pmf):
     flux = sum(pmf.values()) - sum(ap_pmf.values())
     return flux
-
-
-def path_divergence_hammingdist(gpm, pmf):
-    pass
-
-
