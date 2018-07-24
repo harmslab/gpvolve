@@ -10,16 +10,10 @@
 
 import pandas as pd
 import numpy as np
-import json
 import sys
-import random
 from math import e
-from scipy.stats import rv_discrete
-from operator import mul
-from functools import reduce
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
-import decimal as D
+from scipy import sparse
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
@@ -27,11 +21,83 @@ import decimal as D
 
 from gpmap import GenotypePhenotypeMap
 from gpmap.utils import hamming_distance
+from gpgraph.base import get_neighbors
 
 
-def transition_matrix(gpm_data, wildtype, mutations, population_size, minval=0, mutation_rate=1, null_steps=False, reversibility=False):
+def transition_matrix(gpm, population_size, minval=0, mutation_rate=1, null_steps=True, reversibility=True):
+    """ADJACENCY MATRIX"""
+
+    binary = list(gpm.binary)
+    phenotypes = list(gpm.phenotypes)
+
+    row, col, data, phen = [], [], [], []
+    for bi in binary:
+        neighbors = get_neighbors(bi, gpm.mutations)
+        col_tmp = [binary.index(neighbor) for neighbor in neighbors]
+        col += col_tmp
+        row += [binary.index(bi)] * len(col_tmp)
+        data += [1] * len(col_tmp)
+        phen += [phenotypes[binary.index(bi)]] * len(col_tmp)
+
+    ax = len(binary)
+    P = sparse.csr_matrix((phen, (row, col)), shape=(ax, ax))
+
+    """TRANSITION MATRIX"""
+    """Phenotype ratio matrix"""
+
+    P_T = P.T
+    # dense
+    R = P / P_T # dividing two sparse matrices returns dense matrix, why?
+    #sparse
+    R[np.isnan(R)] = 0
+    R = sparse.csr_matrix(R)
+
+    # bra = np.ones((len(gpm.binary), 1), int)
+    # M = np.outer(gpm.phenotypes, bra)
+    # print(M)
+    # M = M * A
+
+    # M_T = M.T
+    # R = M / M_T
+    # print(R)
+    #
+    # """Set nan to 0"""
+    # R[np.isnan(R)] = 0
+    #
+    # R = sparse.csr_matrix(R)
+    """Sparse matrix with 1 for all non-zero values of M"""
+    I = R[:]
+    I[I > 0] = 1
+    I = sparse.csr_matrix(I)
+
+    """FIXATION PROBABILITY MORAN"""
+
+    """Exponential"""
+    R_exp = R.power(population_size)
+
+    """numerator"""
+    R_mi = I - R
+
+    """denominator"""
+    R_exp_mi = I - R_exp
+
+    """Put it all together"""
+    T = R_mi / R_exp_mi  # outputs dense matrix, should be sparse
+    T[np.isnan(T)] = 0
+
+    """Normalize rows to 1"""
+    Tn = sparse.spdiags(1. / T.sum(1).T, 0, *T.shape)
+    T = Tn * T
+
+
+    """Replace nan with 0"""
+    T[np.isnan(T)] = 0
+
+    return T, R
+
+
+def transition_matrix_old(gpm_data, wildtype, mutations, population_size, minval=0, mutation_rate=1, null_steps=False, reversibility=False):
     """ Create transition NxN matrix where N is the number of genotypes """
-
     data = gpm_data
     # Create transition matrix, column names and row indices are genotype names.
     df = pd.DataFrame(index=list(data.genotypes), columns=list(data.genotypes))
@@ -47,7 +113,7 @@ def transition_matrix(gpm_data, wildtype, mutations, population_size, minval=0, 
             next_state = list(df)[column]
             current_phen = get_phenotype(gpm_data, current_state)
             next_phen = get_phenotype(gpm_data, next_state)
-            neighbors = get_neighbors(gpm_data, wildtype, current_state, mutations, reversibility)
+            neighbors = get_neighb(gpm_data, wildtype, current_state, mutations, reversibility)
 
             # Calculate fixation probability if the next state is a neighbor of the current state.
             if next_state in neighbors and next_state != current_state:
@@ -96,7 +162,7 @@ def transition_matrix(gpm_data, wildtype, mutations, population_size, minval=0, 
     return df
 
 
-def get_neighbors(gpm_data, wildtype, binarygenotype, mutations, reversibility=False):
+def get_neighb(gpm_data, wildtype, binarygenotype, mutations, reversibility=False):
     """ (Adapted from gpgraph.base)
 
     - Takes a binary genotype from self.simulate and the mutation dictionary as arguments.

@@ -21,6 +21,7 @@ from operator import mul
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from math import pi
+from matplotlib.ticker import MaxNLocator
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
@@ -30,35 +31,49 @@ from gpgraph import base
 from gpmap import GenotypePhenotypeMap
 from evotpt.sampling import utils
 
+def pathlength_histogram(length_distr1, length_distr2, outfilename):
+    f, ax = plt.subplots()
+    x1, x2 = [length for length in length_distr1], [length for length in length_distr2]
+    y1, y2 = [count for count in length_distr1.values()], [count for count in length_distr2.values()]
+
+    width = 0.2
+    x1 = [x - (width / 2) for x in x1]
+    x2 = [x + (width / 2) for x in x2]
+    ax.bar(x1, y1, width=width)
+    ax.bar(x2, y2, width=width)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.savefig("%s_map_plengths.pdf" % outfilename, format='pdf', dpi=300)
+
+def path_divergence(path_pmf, fraction=1., interval=0.1):
+    from evotpt.tpt_analysis import path_difference
+    step=0
+    ys = []
+    colors = []
+    cmap = plt.cm.get_cmap('Blues')
+    while step < fraction:
+        step += interval
+        diff = path_difference(path_pmf, fraction=step)
+        if sum(diff.values()) > 0:
+            ys.append([value for value in diff.values()])
+            colors.append(cmap(step))
+    x = [*diff]
+
+    f, ax = plt.subplots()
+    for y, color in zip(ys, colors):
+        ax.plot(x, y, color=color)
+
+    plt.savefig("test.pdf", format='pdf', dpi=300)
+
+def top_paths(pmf, fraction=1):
+    pass
 
 class GenotypePhenotypeGraph(object):
-    def __init__(self, gpm, flux_data=None, flux=None, mutant=None):
+    def __init__(self, gpm, paths=None, mutant=None, double_paths=False, paths2=None, peaks=None, sinks=None, chains=None):
         """Flux has to be either flux='matrix' where matrix is a .txt containing a 2D numpy array (tpt output) or
         flux='pmf' where pmf is a probability mass function dictionary of monte carlo sampled paths."""
 
         # Read genotype-phenotype map
         self.read_gpm(gpm)
-
-        if __name__ == "__main__":
-            sys_input = True
-        else:
-            sys_input = False
-
-        if flux == 'pmf':
-            # Read sampling results of respective map
-            if sys_input == True:
-                self.pmf = self.read_pmf(flux_data)
-            else:
-                self.pmf = flux_data
-            self.fluxes = self.flux(self.pmf)
-        elif flux == 'matrix':
-            if sys_input == True:
-                with open(flux_data) as f:
-                    flux_data = np.loadtxt(f)
-            self.fluxes = self.read_matrix(flux_data)
-        else:
-            # print("Define the type of flux input as third argument:\nflux='matrix' (numpy array .txt) or flux='pmf' dictionary .json")
-            pass
 
         # Set filename.
         self.outfilename = sys.argv[1].split(".")[0].split("/")[-1]
@@ -72,10 +87,32 @@ class GenotypePhenotypeGraph(object):
         # Define trajectory length.
         self.traject_length = utils.signed_hamming_distance(self.wildtype, self.wildtype, self.mutant)
 
+        if __name__ == "__main__":
+            sys_input = True
+        else:
+            sys_input = False
+
+        if paths != None:
+            # if input from file, read file, else take input directly
+            if sys_input == True:
+                self.pmf = self.read_pmf(paths)
+            else:
+                self.pmf = paths
+            # turn path probabilities into probability flux along single edges.
+            self.fluxes = self.flux(self.pmf)
+
+        if double_paths == True:
+            self.pmf2 = paths2
+            self.fluxes2 = self.flux(self.pmf2)
+
+            self.chains = chains
+            self.peaks = peaks
+            self.sinks = sinks
+
     def draw_map(self, figsize=(5,5), node_size=18, linewidth=15):
         # Get dicitonary with color for each node and choose color map
         colors = self.colors()
-        cmap = plt.cm.get_cmap('plasma')
+        cmap = plt.cm.get_cmap('Blues')
 
         f, ax = plt.subplots(figsize=figsize)
         # Invert axis
@@ -85,7 +122,7 @@ class GenotypePhenotypeGraph(object):
 
         node_coordinates = self.define_xy_coordinates()
         for node, coordinates in node_coordinates.items():
-            neighbors = list(utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=True))
+            neighbors = list(utils.get_neighb(self.data, self.wildtype, node, self.mutations, reversibility=True))
             for neighbor in neighbors:
                 flux = 0
                 if tuple([node, neighbor]) in self.fluxes:
@@ -106,7 +143,107 @@ class GenotypePhenotypeGraph(object):
             plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
         else:
             plt.savefig("%s_map.pdf" % self.outfilename, format='pdf', dpi=300)
-            plt.show()
+            # plt.show()
+
+        return f, ax
+
+    def draw_map_double_paths(self, figsize=(5,5), node_size=18, linewidth=15):
+        # Get dicitonary with color for each node and choose color map
+        colors = self.colors()
+        cmap = plt.cm.get_cmap('Blues')
+
+        f, ax = plt.subplots(figsize=figsize)
+        # Invert axis
+        ax.invert_yaxis()
+        # Remove axes
+        ax.axis('off')
+
+        node_coordinates = self.define_xy_coordinates()
+        for node, coordinates in node_coordinates.items():
+            # print(node, coordinates)
+            neighbors = list(utils.get_neighb(self.data, self.wildtype, node, self.mutations, reversibility=True))
+            for neighbor in neighbors:
+                flux = 0
+                linetype, dashes = "-", (0, 0)
+                if tuple([node, neighbor]) in self.fluxes:
+                    flux = self.fluxes[tuple([node, neighbor])]
+                elif tuple([node, neighbor]) in self.fluxes2:
+                    flux = self.fluxes2[tuple([node, neighbor])]
+                    linetype = "--"
+                    dashes = (0.5*(flux**-1), 0.5*(flux**-1))
+
+                x = list(zip(coordinates, node_coordinates[neighbor]))[0]
+                y = list(zip(coordinates, node_coordinates[neighbor]))[1]
+                # Draw lines between neighbors
+                ax.plot(x, y, linetype, dashes=dashes, color='black', linewidth=linewidth * flux, zorder=0)
+
+            if node in self.sinks:
+                color = "red"
+            elif node in self.peaks:
+                color = "green"
+            else:
+                # Get color for node from colors dictionary.
+                color = cmap(colors[node])
+
+            # Draw nodes.
+            ax.scatter(*coordinates, color=color, zorder=1, s=pi*node_size**2)
+            # Add genotype labels for node.
+            ax.annotate(node, coordinates, size=node_size / 2, weight='medium', ha='center', va='center', zorder=2)
+
+        if __name__ == "__main__":
+            plt.savefig("%s_map_paths.pdf" % self.outfilename, format='pdf', dpi=300)
+        else:
+            plt.savefig("%s_map_paths.pdf" % self.outfilename, format='pdf', dpi=300)
+            # plt.show()
+
+        return f, ax
+
+    def draw_chains(self, figsize=(5, 5), node_size=18, linewidth=15):
+        # Get dicitonary with color for each node and choose color map
+        colors = self.colors()
+        cmap = plt.cm.get_cmap('Blues')
+
+        f, ax = plt.subplots(figsize=figsize)
+        # Invert axis
+        ax.invert_yaxis()
+        # Remove axes
+        ax.axis('off')
+
+        node_coordinates = self.define_xy_coordinates()
+        for node, coordinates in node_coordinates.items():
+            # print(node, coordinates)
+            neighbors = list(utils.get_neighb(self.data, self.wildtype, node, self.mutations, reversibility=True))
+            for neighbor in neighbors:
+                flux = 0
+                linetype, dashes = "-", (0, 0)
+                if tuple([node, neighbor]) in self.fluxes:
+                    flux = 0.05
+                if tuple([node, neighbor]) in self.chains:
+                    flux = 0.4
+
+                x = list(zip(coordinates, node_coordinates[neighbor]))[0]
+                y = list(zip(coordinates, node_coordinates[neighbor]))[1]
+                # Draw lines between neighbors
+                ax.plot(x, y, linetype, dashes=dashes, color='black', linewidth=linewidth * flux, zorder=0)
+
+            if node in self.sinks:
+                color = "red"
+            elif node in self.peaks:
+                color = "green"
+            else:
+                # Get color for node from colors dictionary.
+                color = cmap(colors[node])
+
+            # Draw nodes.
+            ax.scatter(*coordinates, color=color, zorder=1, s=pi * node_size ** 2)
+            # Add genotype labels for node.
+            ax.annotate(node, coordinates, size=node_size / 2, weight='medium', ha='center', va='center', zorder=2)
+
+        if __name__ == "__main__":
+            plt.savefig("%s_map_chains.pdf" % self.outfilename, format='pdf', dpi=300)
+        else:
+            plt.savefig("%s_map_chains.pdf" % self.outfilename, format='pdf', dpi=300)
+            # plt.show()
 
         return f, ax
 
@@ -173,7 +310,7 @@ class GenotypePhenotypeGraph(object):
             # Get all the genotypes that have exactly one more mutation than the current genotypes.
             for node in nodelist:
                 neighborlist = neighborlist + list(
-                    utils.get_neighbors(self.data, self.wildtype, node, self.mutations, reversibility=False))
+                    utils.get_neighb(self.data, self.wildtype, node, self.mutations, reversibility=False))
             x = 0
             # Get unique list of neighbors and set coordinates for each.
 
