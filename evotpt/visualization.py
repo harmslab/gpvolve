@@ -44,7 +44,7 @@ def pathlength_histogram(length_distr1, length_distr2, outfilename):
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.savefig("%s_map_plengths.pdf" % outfilename, format='pdf', dpi=300)
 
-def path_divergence(path_pmf, fraction=1., interval=0.1):
+def path_divergence(path_pmf, outfilename, fraction=1., interval=0.1):
     from evotpt.tpt_analysis import path_difference
     step=0
     ys = []
@@ -62,12 +62,12 @@ def path_divergence(path_pmf, fraction=1., interval=0.1):
     for y, color in zip(ys, colors):
         ax.plot(x, y, color=color)
 
-    plt.savefig("test.pdf", format='pdf', dpi=300)
+    plt.savefig("%s_map_diverg.pdf" % outfilename, format='pdf', dpi=300)
 
 def top_paths(pmf, fraction=1):
     pass
 
-class GenotypePhenotypeGraph(object):
+class GPGraph(object):
     def __init__(self, gpm, paths=None, mutant=None, double_paths=False, paths2=None, peaks=None, sinks=None, chains=None):
         """Flux has to be either flux='matrix' where matrix is a .txt containing a 2D numpy array (tpt output) or
         flux='pmf' where pmf is a probability mass function dictionary of monte carlo sampled paths."""
