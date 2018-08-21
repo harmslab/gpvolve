@@ -226,14 +226,10 @@ def fixation_probability(gpm_data, current, proposed, pop_size):
     # print("Current: %s, Proposed: %s\nFixation Probability: %s" % (rel_current, rel_proposed, fix_prob))
     return fix_prob
 
-def fixation_probability_moran(gpm_data, current, proposed, pop_size):
-    # Get relative phenotypes.
-    rel_current, rel_proposed = relative_phenotype(gpm_data, current), relative_phenotype(gpm_data, proposed)
-    # print("Current:", rel_current, "Proposed:", rel_proposed)
-    # print((rel_current / rel_proposed)**pop_size)
+def fixation_probability_moran(current, proposed, pop_size):
     # Calculate fixation probability.
     # fix_prob = 1 - e ** (-1 - rel_current / rel_proposed) / 1 - e ** (-pop_size * (1 - rel_current / rel_proposed)
-    fix_prob = (1 - (rel_current / rel_proposed)) / (1 - (rel_current / rel_proposed)**pop_size)
+    fix_prob = (1 - (current / proposed)) / (1 - (current / proposed)**pop_size)
     # print("Current: %s, Proposed: %s\nFixation Probability: %s" % (rel_current, rel_proposed, fix_prob))
     return fix_prob
 

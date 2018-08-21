@@ -24,6 +24,7 @@ from scipy.sparse.linalg import spsolve
 
 from six.moves import range
 import decimal as D
+import inspect
 
 # -------------------------------------------------------------------------
 # LOCAL IMPORTS
@@ -34,14 +35,21 @@ from evotpt.analysis_plotting import MonteCarloAnalysis
 from evotpt import utils
 from evotpt import tpt_analysis
 from gpmap import GenotypePhenotypeMap
+from gpgraph import GenotypePhenotypeGraph
 
-def transition_path_theory(tm):
+def transition_path_theory(tm, A=None, B=None):
     # Transform pandas transition matrix into numpy array. Required for subsequent matrix operations.
 
     #T = np.array(tm, dtype=float)
     T = tm
-    A = [0]
-    B = [len(T) - 1]
+    if A == None:
+        A = [0]
+    else:
+        A = [A]
+    if B == None:
+        B = [len(T) - 1]
+    else:
+        B = [B]
 
     """ Convert transition matrix to scipy sparse matrix """
     Ts = scipy.sparse.csr_matrix(T)
@@ -56,7 +64,7 @@ def transition_path_theory(tm):
                 mu = np.maximum(mu, 0.0)
                 mu /= mu.sum()
 
-    print("Stat. Distr.:\n", mu)
+    # print("Stat. Distr.:\n", mu)
     """forward committor"""
     qplus = forward_committor(Ts, A, B)
     # # backward committor given that the matrix is reversible.
@@ -505,15 +513,15 @@ def add_endstates(F, A, B):
 
     return F_new, M, M + 1
 
-def path_to_pmf(paths, capacities):
-    pmf = {}
+def paths_to_dict(paths, capacities):
+    path_probs = {}
     capac_sum = sum(capacities)
+    # Normalize path probabilities to one because tpt doesn't do that
     capacities_norm = [capac / capac_sum for capac in capacities]
 
     for path, capac in zip(paths, capacities_norm):
-        path = [gpm.data.at[gt, "genotypes"] for gt in path]
-        pmf[tuple(path)] = capac
-    return pmf
+        path_probs[tuple(path)] = capac
+    return path_probs
 
 def min_sparse(X):
     if len(X.data) == 0:
@@ -525,6 +533,10 @@ if __name__ == "__main__":
     # execute only if run as a script
     outfilename = sys.argv[1].split(".")[0].split("/")[-1]
     gpm = GenotypePhenotypeMap.read_json(sys.argv[1])
+
+    G = GenotypePhenotypeGraph(gpm)
+
+
     tm, ratio_matrix = utils.transition_matrix(gpm,
                                  population_size=100,
                                  minval=0,
@@ -533,34 +545,34 @@ if __name__ == "__main__":
                                  reversibility=True)
 
     flux_matrix, A, B = transition_path_theory(tm)
-    # print("FM\n", flux_matrix)s
+    # # print("FM\n", flux_matrix)s
     paths, capacities = pathways(flux_matrix, A, B)
-    path_pmf = path_to_pmf(paths, capacities)
-    # print("Paths:\n", path_pmf)
-
-    number_of_paths = tpt_analysis.number_of_paths(path_pmf)
-
-    sinks_ = tpt_analysis.sinks(ratio_matrix)
-    sinks = [gpm.genotypes[sink] for sink in sinks_]
-    peaks_ = tpt_analysis.peaks(ratio_matrix)
-    peaks = [gpm.genotypes[peak] for peak in peaks_]
-    chains_ = tpt_analysis.chains(ratio_matrix)
-    chains = []
-    for chain in chains_:
-        chains.append(tuple([gpm.genotypes[node] for node in chain]))
-
+    path_pmf = paths_to_dict(paths, capacities)
+    # # print("Paths:\n", path_pmf)
+    #
+    # number_of_paths = tpt_analysis.number_of_paths(path_pmf)
+    #
+    # sinks_ = tpt_analysis.sinks(ratio_matrix)
+    # sinks = [gpm.genotypes[sink] for sink in sinks_]
+    # peaks_ = tpt_analysis.peaks(ratio_matrix)
+    # peaks = [gpm.genotypes[peak] for peak in peaks_]
+    # chains_ = tpt_analysis.chains(ratio_matrix)
+    # chains = []
+    # for chain in chains_:
+    #     chains.append(tuple([gpm.genotypes[node] for node in chain]))
+    #
     ap_pmf = tpt_analysis.adaptive_paths(gpm, path_pmf)
     non_ap_pmf = tpt_analysis.non_adaptive_paths(path_pmf, ap_pmf)
     if ap_pmf:
         path_diff = tpt_analysis.path_difference(ap_pmf, fraction=1)
-        length_distr_ap = tpt_analysis.length_distr(ap_pmf)
-        length_distr_non_ap = tpt_analysis.length_distr(non_ap_pmf)
-        non_adpv_flux = tpt_analysis.non_adaptive_flux(path_pmf, ap_pmf)
-
-    flux_map = visualization.GenotypePhenotypeGraph(gpm, paths=ap_pmf, double_paths=True, paths2=non_ap_pmf, peaks=peaks, sinks=sinks, chains=chains)
-    flux_map.draw_map_double_paths(figsize=(10, 7), node_size=15, linewidth=13)
-    flux_map.draw_chains(figsize=(10, 7), node_size=15, linewidth=13)
-
-    visualization.pathlength_histogram(length_distr_ap, length_distr_non_ap, outfilename)
-
-    visualization.path_divergence(ap_pmf, fraction=1., interval=0.1)
+        # length_distr_ap = tpt_analysis.length_distr(ap_pmf)
+        # length_distr_non_ap = tpt_analysis.length_distr(non_ap_pmf)
+        # non_adpv_flux = tpt_analysis.non_adaptive_flux(path_pmf, ap_pmf)
+    #
+    # flux_map = visualization.GenotypePhenotypeGraph(gpm, paths=ap_pmf, double_paths=True, paths2=non_ap_pmf, peaks=peaks, sinks=sinks, chains=chains)
+    # flux_map.draw_map_double_paths(figsize=(10, 7), node_size=15, linewidth=13)
+    # flux_map.draw_chains(figsize=(10, 7), node_size=15, linewidth=13)
+    #
+    # visualization.pathlength_histogram(length_distr_ap, length_distr_non_ap, outfilename)
+    #
+    # visualization.path_divergence(ap_pmf, outfilename, fraction=1., interval=0.1)
