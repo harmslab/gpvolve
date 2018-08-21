@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -97,3 +98,16 @@ ENV/
 
 # mypy
 .mypy_cache/
+=======
+**/.DS_Store
+*.pyc
+*.pyc
+
+*/*/*/__pycache__/
+
+*/*/__pycache__/
+
+*/__pycache__/
+*.egg-info/
+*.egg
+>>>>>>> evotpt/master
