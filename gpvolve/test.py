@@ -1,1 +1,1 @@
-aa
+from gpvolve.markovmodel import MarkovModel
