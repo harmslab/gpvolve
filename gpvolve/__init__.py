@@ -1,1 +1,2 @@
-from .markovmodel import MarkovModel
+from .markovmodel import EvoMarkovStateModel
+from .visualization import *
