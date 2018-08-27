@@ -11,7 +11,7 @@ class EvoMarkovStateModel(object):
                  model=moran,
                  selection_gradient=1,
                  population_size=2,
-                 two_step=False,
+                 two_step_probability=0,
                  source=None,
                  target=None,
                  ):
@@ -20,7 +20,7 @@ class EvoMarkovStateModel(object):
         self.gpm = gpm
         self.model = model
         self.population_size = population_size
-        self.two_step = two_step
+        self.two_step_prob = two_step_probability
         self.source = source
         self.target = target
         # Set pcca attributes to None
@@ -70,11 +70,23 @@ class EvoMarkovStateModel(object):
         if not population_size:
             population_size = self.population_size
 
-        if self.two_step:
-            pass  # Set edges between genotypes with hamming distances
+        if self.two_step_prob > 0:
+            edges = []
+            A = nx.adjacency_matrix(self.network)
+
+            for node in self.network.nodes:
+                for edge in A[node]:
+                    print(value1)
+                    for two_step, value2 in enumerate(A[neighbor]):
+                        print(value2)
+                        if node != two_step:
+                            edges.append((node, two_step))
+            print(edges)
+
 
         # Calculate fixation probability
         self.network.add_model(model=model, population_size=population_size)
+
         # Set probability of acquiring no mutation / Matrix diagonal.
         self.network = self.self_probability(self.network)
         # Create transition matrix.
