@@ -71,17 +71,11 @@ class EvoMarkovStateModel(object):
             population_size = self.population_size
 
         if self.two_step_prob > 0:
-            edges = []
             A = nx.adjacency_matrix(self.network)
-
-            for node in self.network.nodes:
-                for edge in A[node]:
-                    print(value1)
-                    for two_step, value2 in enumerate(A[neighbor]):
-                        print(value2)
-                        if node != two_step:
-                            edges.append((node, two_step))
-            print(edges)
+            S = shortest_path(A)
+            indices = np.where(S == 2)
+            edges = list(zip(indices[0], indices[1]))
+            self.add_edges_from(edges)
 
 
         # Calculate fixation probability
