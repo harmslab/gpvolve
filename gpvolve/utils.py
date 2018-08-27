@@ -2,6 +2,16 @@ from scipy.sparse.csgraph import shortest_path
 import networkx as nx
 
 
+def add_probability(network, edges, model, edge_weight=1, **params):
+    for edge in edges:
+        node1 = edge[0]
+        node2 = edge[1]
+
+        phenotype1 = network.node[node1]["phenotypes"]
+        phenotype2 = network.node[node2]["phenotypes"]
+
+        network.edges[edge]['prob'] = edge_weight * model(phenotype1, phenotype2, **params)
+
 def cluster_peaks(network, clusters):
     """Get fitness peaks of clusters
     Parameters

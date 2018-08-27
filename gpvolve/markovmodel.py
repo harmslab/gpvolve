@@ -58,34 +58,38 @@ class EvoMarkovStateModel(object):
         # Can't use 'fitness' because add_model() will use 'phenotype'.
         self.gpm.data.phenotypes = norm_fitness
 
-    def build_tm(self, model=None, population_size=None):
+    def build_tm(self, model=None, population_size=None, two_step_probability=None):
         """
         Build transition matrix with given substitution model and population size.
         Matrix can be recalculated without reinitializing the class by calling build_tm() with desired parameters
         """
-        # If no substitution model given, use initial model.
+        # If tm is recalculated after Class init., check if new parameters were given, else use initial parameters.
         if not model:
             model = self.model
-        # If no population size given, use initial value.
         if not population_size:
             population_size = self.population_size
-
-        if self.two_step_prob > 0:
-            A = nx.adjacency_matrix(self.network)
-            S = shortest_path(A)
-            indices = np.where(S == 2)
-            edges = list(zip(indices[0], indices[1]))
-            self.add_edges_from(edges)
-
+        if not two_step_probability:
+            two_step_probability = self.two_step_prob
 
         # Calculate fixation probability
-        self.network.add_model(model=model, population_size=population_size)
+        add_probability(self.network, edges=self.network.edges(), model=model, population_size=population_size)
+
+        if two_step_probability > 0:
+            # Get edges between nodes with a hamming distance of 2
+            two_step_edges = self.get_two_step_edges(self.network)
+            # Add edges to network
+            self.network.add_edges_from(two_step_edges)
+            # Calculate fixation probability for the new edges.
+            add_probability(self.network,
+                            edges=two_step_edges,
+                            edge_weight=two_step_probability,
+                            model=model,
+                            population_size=population_size)
 
         # Set probability of acquiring no mutation / Matrix diagonal.
         self.network = self.self_probability(self.network)
         # Create transition matrix.
-        tm = nx.attr_matrix(self.network, edge_attr='prob', normalized=True)[0]
-        tm = np.array(tm)
+        tm = np.array(nx.attr_matrix(self.network, edge_attr='prob', normalized=True)[0])
         self._tm = tm
 
     def pcca(self, c):
@@ -231,6 +235,14 @@ class EvoMarkovStateModel(object):
             return self._metastable_assignment
         else:
             raise Exception("Perform PCCA before calling metastable_assignment")
+
+    @staticmethod
+    def get_two_step_edges(network):
+        A = nx.adjacency_matrix(network)
+        S = shortest_path(A)
+        indices = np.where(S == 2)
+        two_step_edges = list(zip(indices[0], indices[1]))
+        return two_step_edges
 
     @staticmethod
     def self_probability(network):
