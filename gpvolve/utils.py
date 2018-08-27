@@ -30,27 +30,31 @@ def shortest_path_matrix(network):
     return shortest_path_matrix
 
 
-def get_shells(network, clusters, shortest_path_matrix):
+def cluster_positions(network, clusters, scale=None):
     """
     Nested list of shells for each cluster. shells = {cluster: [[nodes of h.-dist.=1],[.. h.-dist=2],[.. h.-dist=3]]}
     shells = {2: [[1,3,4] ,[12,23], [28,34,45]]}
     """
+    clusters = clusters_to_dict(clusters)
+    peaks = cluster_peaks(network, clusters)
+    sp_matrix = shortest_path_matrix(network)
     shells = {}
-    for cluster, peak in cluster_peaks(network, clusters).items():
+    for cluster, peak in peaks.items():
         temp = {}
         for node in clusters[cluster]:
-            dist = shortest_path_matrix[peak][node]
+            dist = sp_matrix[peak][node]
             try:
                 temp[int(dist)].append(node)
             except KeyError:
                 temp[int(dist)] = []
                 temp[int(dist)].append(node)
-        shells[cluster] = [values for values in temp.values()]
-    return shells
-
-
-def get_shell_pos(network, shells, scale=1):
-    shell_pos = {}
+        shells[cluster] = [temp[i] for i in range(0, max(temp.keys())+1)]
+    pos = {}
     for i, cluster in shells.items():
-        shell_pos[i] = nx.shell_layout(network, cluster, scale=scale)
-    return shell_pos
+        peak_x = network.node[peaks[i]]["forward_committor"]
+        peak_y = network.node[peaks[i]]["phenotypes"]
+        pos.update(nx.shell_layout(network, cluster, scale=scale, center=[peak_x, peak_y]))
+
+    return pos
+
+

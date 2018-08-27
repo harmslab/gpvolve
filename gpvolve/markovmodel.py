@@ -23,10 +23,13 @@ class EvoMarkovStateModel(object):
         self.two_step = two_step
         self.source = source
         self.target = target
-        # Set pcca attributes None
+        # Set pcca attributes to None
         self._metastable_memberships = None
         self._metastable_assignment = None
         self._metastable_sets = None
+        # Set tpt to None
+        self._tpt = None
+        self._tpt_coarse = None
 
         # Save initial phenotype values. Check if phenotypes_ already exists to prevent overwriting.
         if not hasattr(self.gpm.data, 'phenotypes_'):
@@ -81,7 +84,8 @@ class EvoMarkovStateModel(object):
 
     def pcca(self, c):
         pcca = self.M.pcca(c)
-        self._metastable_sets = clusters_to_dict(pcca.metastable_sets)
+        self._metastable_sets = pcca.metastable_sets
+        #self._metastable_sets = clusters_to_dict(pcca.metastable_sets)
         self._metastable_memberships = pcca.memberships
         self._metastable_assignment = pcca.metastable_assignment
 
@@ -90,11 +94,55 @@ class EvoMarkovStateModel(object):
             raise Exception("Define source(type=list) and target(type=list) first.\nEXAMPLE: M.source = ['AYK']")
         else:
             # Get forward and backward committor values
-            forward_committor = {i:f_comm for i, f_comm in enumerate(self.M.committor_forward)}
-            backward_committor = {i: f_comm for i, f_comm in enumerate(self.M.committor_backward)}
+            forward_committor = {i:f_comm for i, f_comm in enumerate(self.forward_committor)}
+            backward_committor = {i: f_comm for i, f_comm in enumerate(self.backward_committor)}
             # Set node attribute
             nx.set_node_attributes(self.network, name="forward_committor", values=forward_committor)
             nx.set_node_attributes(self.network, name="backward_committor", values=backward_committor)
+
+    def tpt(self):
+        self._tpt = msm.tpt(self.M, self.source, self.target)
+
+    def tpt_coarse(self, clusters):
+        if self._tpt:
+            self._tpt_coarse = self._tpt.coarse_grain(clusters)[1]
+        else:
+            self._tpt = msm.tpt(self.M, self.source, self.target)
+            self._tpt_coarse = self._tpt.coarse_grain(clusters)[1]
+
+    def pathways(self, coarse=False, fraction=1, maxiter=1000):
+        if coarse:
+            return self._tpt_coarse.pathways(fraction=fraction, maxiter=maxiter)
+        else:
+            return self._tpt.pathways(fraction=fraction, maxiter=maxiter)
+
+    @property
+    def net_flux(self):
+        if self._tpt:
+            return self._tpt.net_flux
+        else:
+            raise Exception("Perform tpt before calling net_flux")
+
+    @property
+    def total_flux(self):
+        if self._tpt:
+            return self._tpt.total_flux
+        else:
+            raise Exception("Perform tpt before calling total_flux")
+
+    @property
+    def coarse_net_flux(self):
+        if self._tpt_coarse:
+            return self._tpt_coarse.net_flux
+        else:
+            raise Exception("Coarse-grain before calling total_flux")
+
+    @property
+    def coarse_total_flux(self):
+        if self._tpt_coarse:
+            return self._tpt_coarse.total_flux
+        else:
+            raise Exception("Coarse-grain before calling total_flux")
 
     @property
     def tm(self):
@@ -177,7 +225,6 @@ class EvoMarkovStateModel(object):
             return self._metastable_assignment
         else:
             raise Exception("Perform PCCA before calling metastable_assignment")
-
 
     @staticmethod
     def self_probability(network):
