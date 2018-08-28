@@ -3,6 +3,7 @@ from gpgraph.models import *
 import networkx as nx
 import pyemma.msm as msm
 from .utils import *
+from scipy import sparse
 
 
 class EvoMarkovStateModel(object):
@@ -63,7 +64,7 @@ class EvoMarkovStateModel(object):
         Build transition matrix with given substitution model and population size.
         Matrix can be recalculated without reinitializing the class by calling build_tm() with desired parameters
         """
-        # If tm is recalculated after Class init., check if new parameters were given, else use initial parameters.
+        # If tm is recalculated after class init., check if new parameters were given, else use initial parameters.
         if not model:
             model = self.model
         if not population_size:
