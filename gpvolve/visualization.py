@@ -1,6 +1,7 @@
 from .utils import *
 import matplotlib.pyplot as plt
 from gpgraph.draw import *
+from scipy import sparse
 
 
 def plot_timescales(timescales, figsize=None, n=None, color='orange'):
@@ -33,11 +34,12 @@ def plot_clusters(network, clusters, scale=1, figsize=(10,10)):
 
     return fig, ax
 
-def draw_clusters(
-    network,
-    clusters,
+def draw_network(
+    M,
+    clusters=None,
+    flux=None,
     ax=None,
-    figsize=(10,10),
+    figsize=(15,10),
     cluster_scale=1,
     nodelist=[],
     attribute="phenotypes",
@@ -46,7 +48,21 @@ def draw_clusters(
     cmap="YlOrRd",
     cmap_truncate=False,
     colorbar=False,
-    labels='binary',
+    labels="genotypes",
+    edge_scalar=15.0,
+    edge_color='k',
+    style='solid',
+    edge_alpha=1.0,
+    arrows=False,
+    arrowstyle='-|>',
+    arrowsize=10,
+    node_size=3000,
+    node_color='r',
+    node_shape='o',
+    alpha=1.0,
+    linewidths=0,
+    edgecolors="black",
+    label=None,
     **kwds):
     """Draw the GenotypePhenotypeGraph using Matplotlib.
 
@@ -161,14 +177,49 @@ def draw_clusters(
     else:
         fig = ax.get_figure(figsize=figsize)
 
-    # Flattened position
-    pos = cluster_positions(network, clusters, scale=cluster_scale)
+
+    if clusters:
+        # Positions of circular clusters.
+        pos = cluster_positions(M.network, clusters, scale=cluster_scale)
+        ax.spines['left'].set_visible(True)
+        ax.spines['bottom'].set_visible(True)
+        ax.set_xticks([i for i in np.arange(0, 1.1, 0.1)])
+        ax.autoscale(enable=True)
+        ax.set_xlabel("Forward Committor", size=15)
+        ax.set_ylabel("Fitness", size=15)
+        ax.axis("equal")
+    else:
+        # Flattened position.
+        pos = flattened(M.network, vertical=True)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    if flux is None:
+        # All edges
+        edgelist = M.network.edges()
+        width = 1
+    elif flux.any() and clusters:
+        peaks = cluster_peaks(M.network, clusters)
+        centers = cluster_centers(M, peaks)
+        indices = np.nonzero(flux)
+        edges = list(zip(indices[0], indices[1]))
+        edgelist = [(centers[i[0]], centers[i[1]]) for i in edges]
+        width = edge_scalar * flux[flux > 0]
+    else:
+        # Get flux through edges
+        indices = np.nonzero(flux)
+        edgelist = list(zip(indices[0], indices[1]))
+        width = edge_scalar * flux[flux > 0]
 
     if not nodelist:
-        nodelist = list(network.nodes().keys())
+        nodelist = list(M.network.nodes().keys())
 
     if vmax is None:
-        attributes = list(nx.get_node_attributes(network, name=attribute).values())
+        attributes = list(nx.get_node_attributes(M.network, name=attribute).values())
         vmin = min(attributes)
         vmax = max(attributes)
 
@@ -176,23 +227,55 @@ def draw_clusters(
         cmap = truncate_colormap(cmap, minval=0.05, maxval=0.95)
 
     # Default options
-    options = dict(
-        pos=pos,
+    node_options = dict(
         nodelist=nodelist,
-        arrows=False,
         vmin=vmin,
         vmax=vmax,
-        node_color=[network.nodes[n][attribute] for n in nodelist],
+        node_shape=node_shape,
+        node_size=node_size,
+        node_color=[M.network.nodes[n][attribute] for n in nodelist],
+        linewidths=linewidths,
+        edgecolors=edgecolors,
         cmap=cmap,
+        labels={n: M.network.nodes[n][labels] for n in nodelist},
         cmap_truncate=False,
-        edge_color='white',
-        labels={n: network.nodes[n][labels] for n in nodelist},
-        with_labels=False
     )
-    options.update(**kwds)
 
-    # Draw fig
-    nx.draw_networkx(network, **options)
+    # Draw edges
+    nx.draw_networkx_edges(
+        G=M.network,
+        pos=pos,
+        edgelist=edgelist,
+        width=width,
+        edge_color=edge_color,
+        ax=ax,
+        style=style,
+        alpha=edge_alpha,
+        arrows=arrows,
+        arrowstyle=arrowstyle,
+        arrowsize=arrowsize,
+    )
+
+    # Draw nodes.
+    nx.draw_networkx_nodes(
+        G=M.network,
+        pos=pos,
+        ax=ax,
+        **node_options
+    )
+
+    # Draw labels again manually because I can't find the bug that causes networkx to ignore labels.
+    label_dict = {n: M.network.nodes[n][labels] for n in M.network.nodes().keys()}
+    nx.draw_networkx_labels(M.network, pos=pos, labels=label_dict)
+
+    if flux.any():
+        rounded = np.round(flux, decimals=2)
+        edgeflux = sparse.dok_matrix(rounded)
+        # Draw edge labels
+        nx.draw_networkx_edge_labels(M.network, pos=pos, edge_labels=edgeflux,
+                                     label_pos=0.5, font_size=10, font_color='k',
+                                     font_family='sans-serif', font_weight='normal', alpha=1.0, bbox=None, ax=None,
+                                     rotate=True, **kwds)
 
     # Add a colorbar?
     if colorbar:
@@ -204,13 +287,5 @@ def draw_clusters(
         cm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
         cm.set_array([])
         fig.colorbar(cm)
-
-    ax.spines['left'].set_visible(True)
-    ax.spines['bottom'].set_visible(True)
-    ax.set_xticks([i for i in np.arange(0, 1.1, 0.1)])
-    ax.autoscale(enable=True)
-    ax.set_xlabel("Forward Committor", size=15)
-    ax.set_ylabel("Fitness", size=15)
-    ax.axis("equal")
 
     return fig, ax

@@ -2,6 +2,16 @@ from scipy.sparse.csgraph import shortest_path
 import networkx as nx
 
 
+def add_probability(network, edges, model, edge_weight=1, **params):
+    for edge in edges:
+        node1 = edge[0]
+        node2 = edge[1]
+
+        phenotype1 = network.node[node1]["phenotypes"]
+        phenotype2 = network.node[node2]["phenotypes"]
+
+        network.edges[edge]['prob'] = edge_weight * model(phenotype1, phenotype2, **params)
+
 def cluster_peaks(network, clusters):
     """Get fitness peaks of clusters
     Parameters
@@ -10,12 +20,20 @@ def cluster_peaks(network, clusters):
     clusters: Dictionary
               Keys are cluster numbers. Values are lists of nodes of the respective cluster
     """
+    if not isinstance(clusters, dict):
+        clusters = clusters_to_dict(clusters)
     cluster_peaks = {}
     for cluster, nodes in clusters.items():
         fitnesses = {node: network.node[node]["phenotypes"] for node in nodes}
         cluster_peaks[cluster] = max(fitnesses, key=fitnesses.get)
     return cluster_peaks
 
+def cluster_centers(M, peaks):
+    new = {0: M.source[0]}
+    for key, value in peaks.items():
+        new[key+1] = value
+    new[len(peaks)+1] = M.target[0]
+    return new
 
 def clusters_to_dict(clusters):
     """Turn list of arrays from pcca.metastable_sets into dictionary"""
