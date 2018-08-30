@@ -34,15 +34,12 @@ def plot_clusters(network, clusters, scale=1, figsize=(10,10)):
 
     return fig, ax
 
-def draw_flux(network):
-    pass
-
 def draw_network(
     M,
     clusters=None,
     flux=None,
     ax=None,
-    figsize=(10,10),
+    figsize=(15,10),
     cluster_scale=1,
     nodelist=[],
     attribute="phenotypes",
@@ -51,15 +48,15 @@ def draw_network(
     cmap="YlOrRd",
     cmap_truncate=False,
     colorbar=False,
-    labels='binary',
-    edge_scalar=1.0,
+    labels="genotypes",
+    edge_scalar=15.0,
     edge_color='k',
     style='solid',
     edge_alpha=1.0,
     arrows=False,
     arrowstyle='-|>',
     arrowsize=10,
-    node_size=300,
+    node_size=3000,
     node_color='r',
     node_shape='o',
     alpha=1.0,
@@ -182,7 +179,6 @@ def draw_network(
 
 
     if clusters:
-
         # Positions of circular clusters.
         pos = cluster_positions(M.network, clusters, scale=cluster_scale)
         ax.spines['left'].set_visible(True)
@@ -213,7 +209,6 @@ def draw_network(
         edges = list(zip(indices[0], indices[1]))
         edgelist = [(centers[i[0]], centers[i[1]]) for i in edges]
         width = edge_scalar * flux[flux > 0]
-
     else:
         # Get flux through edges
         indices = np.nonzero(flux)
@@ -242,8 +237,8 @@ def draw_network(
         linewidths=linewidths,
         edgecolors=edgecolors,
         cmap=cmap,
+        labels={n: M.network.nodes[n][labels] for n in nodelist},
         cmap_truncate=False,
-        labels={n: M.network.nodes[n]['genotypes'] for n in nodelist}
     )
 
     # Draw edges
@@ -268,6 +263,19 @@ def draw_network(
         ax=ax,
         **node_options
     )
+
+    # Draw labels again manually because I can't find the bug that causes networkx to ignore labels.
+    label_dict = {n: M.network.nodes[n][labels] for n in M.network.nodes().keys()}
+    nx.draw_networkx_labels(M.network, pos=pos, labels=label_dict)
+
+    if flux.any():
+        rounded = np.round(flux, decimals=2)
+        edgeflux = sparse.dok_matrix(rounded)
+        # Draw edge labels
+        nx.draw_networkx_edge_labels(M.network, pos=pos, edge_labels=edgeflux,
+                                     label_pos=0.5, font_size=10, font_color='k',
+                                     font_family='sans-serif', font_weight='normal', alpha=1.0, bbox=None, ax=None,
+                                     rotate=True, **kwds)
 
     # Add a colorbar?
     if colorbar:

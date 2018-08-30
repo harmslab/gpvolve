@@ -22,7 +22,6 @@ def cluster_peaks(network, clusters):
     """
     if not isinstance(clusters, dict):
         clusters = clusters_to_dict(clusters)
-
     cluster_peaks = {}
     for cluster, nodes in clusters.items():
         fitnesses = {node: network.node[node]["phenotypes"] for node in nodes}

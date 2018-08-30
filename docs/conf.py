@@ -20,8 +20,6 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
-
 import gpvolve
 
 # -- General configuration ---------------------------------------------
@@ -32,7 +30,12 @@ import gpvolve
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon'  # 'sphinx_gallery.gen_gallery'
+]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -159,5 +162,31 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+# Napoleon settings
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = True
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
 
-
+# # ------------------------- Sphinx Gallery ------------------------
+#
+# # Sphinx gallery conf
+# sphinx_gallery_conf = {
+#     # path to your examples scripts
+#     'examples_dirs' : '../examples',
+#     # path where to save gallery generated examples
+#     'gallery_dirs'  : 'gallery',
+#     'backreferences_dir': 'generated/modules',
+#     'download_section_examples' : False,
+#     'reference_url': {
+#         'epistasis': None,
+#     },
+# }
+#
+# plot_gallery = 'True'
