@@ -163,7 +163,7 @@ class EvoMarkovStateModel(object):
 
         Returns
         -------
-        Nothing: None.
+        Nothing : None.
             Fitnesses are automatically stored in gpm.data.phenotypes.
         """
         b = 1/selection_gradient - 1
@@ -191,7 +191,7 @@ class EvoMarkovStateModel(object):
 
         Returns
         -------
-        Nothing: None.
+        Nothing : None.
             Class attribute tm is updated automatically.
         """
         # If tm is recalculated after class init., check if new parameters were given, else use initial parameters.
@@ -253,7 +253,7 @@ class EvoMarkovStateModel(object):
             raise Exception("Define source(type=list) and target(type=list) first.\nEXAMPLE: M.source = ['AYK']")
         else:
             # Get forward and backward committor values
-            forward_committor = {i:f_comm for i, f_comm in enumerate(self.forward_committor)}
+            forward_committor = {i:f_comm for i, f_comm in enumerate(self.forward_committor)}  # abac
             backward_committor = {i: f_comm for i, f_comm in enumerate(self.backward_committor)}
             # Set node attribute
             nx.set_node_attributes(self.network, name="forward_committor", values=forward_committor)

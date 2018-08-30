@@ -11,21 +11,20 @@ You can use this library to:
 
 The core-utilities of this library are built on top of the pyemma and msmtools packages.
 For a deeper understanding of these tools, we recommend to read the docs and scientific
-references of their respective libraries (ref. 1, 2, 4).
+references of the respective libraries ([1]_, [2]_, [3]_).
 
-A rationale for treating fitness landscapes as markov systems can be found in ref. 4.
+A rationale for treating fitness landscapes as markov systems can be found in [4]_.
 
 Currently, this package works only as an API. There is no command-line
-interface. Instead, we encourage you use this package inside `Jupyter notebooks` .
+interface. Instead, we encourage you use this package inside `Jupyter notebooks`_ .
 
-References:
-   1 https://github.com/markovmodel/PyEMMA
-   2 https://github.com/markovmodel/msmtools
-   3 M. K. Scherer, B. Trendelkamp-Schroer, F. Paul, G. Pérez-Hernández, M. Hoffmann,
-     N. Plattner, C. Wehmeyer, J.-H. Prinz and F. Noé: PyEMMA 2: A Software Package for
-     Estimation, Validation, and Analysis of Markov Models, J. Chem. Theory Comput. 11, 5525-5542 (2015)
-   4 G. Sella, A. E. Hirsh: The application of statistical physics to evolutionary biology, Proceedings
-     of the National Academy of Sciences Jul 2005, 102 (27) 9541-9546; DOI: 10.1073/pnas.0501865102
+References
+----------
+
+.. [1] https://github.com/markovmodel/PyEMMA
+.. [2] https://github.com/markovmodel/msmtools
+.. [3] M K Scherer, B Trendelkamp-Schroer, F. Paul, G. Pérez-Hernández, M. Hoffmann, N. Plattner, C. Wehmeyer, J.-H. Prinz and F. Noé: PyEMMA 2: A Software Package for Estimation, Validation, and Analysis of Markov Models, J. Chem. Theory Comput. 11, 5525-5542 (2015)
+.. [4] G Sella, A. E. Hirsh: The application of statistical physics to evolutionary biology, Proceedings of the National Academy of Sciences Jul 2005, 102 (27) 9541-9546; DOI: 10.1073/pnas.0501865102
 
 
 Basic Example
@@ -35,7 +34,7 @@ Calculate and plot the fluxes between wildtype and triple mutant on an example g
 
 .. code-block:: python
 
-   # Import the base class and the a visualization tool.
+   # Import the base class and a visualization tool.
    from gpvolve.markovmodel import EvoMarkovStateModel
    from gpvolve.visualization import draw_network
 
@@ -75,7 +74,7 @@ Calculate and plot the fluxes between wildtype and triple mutant on an example g
                           flux=norm_fluxes,
                           colorbar=True)
 
-.. image:: img/basic-example.png
+.. image:: img/basic_example.png
 
 Documentation
 -------------
@@ -89,3 +88,4 @@ Documentation
    contributing
    history
    api
+
