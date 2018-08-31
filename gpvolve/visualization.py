@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from gpgraph.draw import *
 from scipy import sparse
 
+def phenotype_fitness(phenotypes, fitnesses):
+    pass
 
 def plot_timescales(timescales, figsize=None, n=None, color='orange'):
     fig, ax = plt.subplots(figsize=figsize)
