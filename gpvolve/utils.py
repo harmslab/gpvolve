@@ -2,6 +2,27 @@ from scipy.sparse.csgraph import shortest_path
 import networkx as nx
 
 
+def self_probability(network):
+    """Compute the self-looping probability for all nodes. Corresponds to the diagonal of the transiton matrix.
+
+    Parameters
+    ----------
+    network : gpgraph object.
+        A gpgraph object contains all genotypes and their properties as a network of nodes and edges.
+
+    Returns
+    -------
+    network : gpgraph object.
+        The returned network contains self-looping edges with their respective probability as edge attribute.
+    """
+    selfprob = {}
+    for node in network.nodes():
+        rowsum = sum([tup[2] for tup in network.out_edges(nbunch=node, data='fixation_probability')])
+        selfprob[(node, node)] = max(0, 1 - rowsum)
+    # Add self-looping edges to network.
+    network.add_edges_from([(node, node) for node in network.nodes()])
+    nx.set_edge_attributes(network, name='fixation_probability', values=selfprob)
+
 def add_probability(network, edges, model, edge_weight=1, **params):
     for edge in edges:
         node1 = edge[0]

@@ -1,4 +1,5 @@
 from gpgraph import GenotypePhenotypeGraph
+from .utils import self_probability
 
 import networkx as nx
 import numpy as np
@@ -30,13 +31,20 @@ class EvoMSM(GenotypePhenotypeGraph):
         nx.set_node_attributes(self, name='fitness', values=values)
 
     def add_fixation_probability(self, fixation_model, **params):
-        probs = {}
-        for edge in self.edges:
-            f1 = self.node[edge[0]]['fitness']
-            f2 = self.node[edge[0]]['fitness']
+        # Split all egdes into two tuples, each containing one node of each pair of nodes at the same position.
+        nodepairs = list(zip(*self.edges))  # [(1, 4), (5, 8), (10, 25)] -> [(1, 5, 10), (4, 8, 25)]
 
-            probs[edge] = fixation_model(f1, f2, **params)
+        # Get fitnesses of all nodes.
+        fitness1 = np.array([self.node[node]['fitness'] for node in nodepairs[0]])
+        fitness2 = np.array([self.node[node]['fitness'] for node in nodepairs[1]])
+        # Compute fixation probabilities and get edge keys.
+        probs = fixation_model(fitness1, fitness2, **params)
+        edges = self.edges.keys()
+        # Set edge attribute.
+        nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(edges, probs)))
+        # Add self-probability, i.e. the diagonal of the transition matrix.
+        self_probability(self)
 
-        nx.set_edge_attributes(self, name='fixation_probability', values=probs)
+
 
 
