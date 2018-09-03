@@ -1,5 +1,6 @@
 from gpgraph import GenotypePhenotypeGraph
 from .utils import self_probability
+from .cluster import *
 
 import networkx as nx
 import numpy as np
@@ -23,11 +24,11 @@ class EvoMSM(GenotypePhenotypeGraph):
         Nothing: None
             The computed fitness values are automatically stored under self.gpm.data.fitnesses.
         """
-        # Add fitnesses column to gpm.data pandas dataframe.
+        # Add fitnesses column to gpm.data pandas data frame.
         self.gpm.data['fitnesses'] = fitness_function(self.gpm.data.phenotypes, **params)
 
+        # Add node attribute.
         values = {node: fitness for node, fitness in enumerate(self.gpm.data.fitnesses.tolist())}
-        # Add node
         nx.set_node_attributes(self, name='fitness', values=values)
 
     def add_fixation_probability(self, fixation_model, **params):
@@ -37,13 +38,33 @@ class EvoMSM(GenotypePhenotypeGraph):
         # Get fitnesses of all nodes.
         fitness1 = np.array([self.node[node]['fitness'] for node in nodepairs[0]])
         fitness2 = np.array([self.node[node]['fitness'] for node in nodepairs[1]])
+
         # Compute fixation probabilities and get edge keys.
         probs = fixation_model(fitness1, fitness2, **params)
-        edges = self.edges.keys()
+
         # Set edge attribute.
+        edges = self.edges.keys()
         nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(edges, probs)))
+
         # Add self-probability, i.e. the diagonal of the transition matrix.
         self_probability(self)
+
+    def cluster(self, method, **params):
+
+        assignments, memberships = method(self, **params)
+
+        nx.set_node_attributes(self, name="cluster", values=assignments)
+
+        return memberships
+
+    def flux(self, method, **params):
+        pass
+
+    def get_edge_attr(self, attribute):
+        pass
+
+    def get_node_attr(self, attribute):
+        pass
 
 
 
