@@ -33,4 +33,7 @@ def pcca(evomsm, c):
     # Dictionary of cluster memberships (tuple of length c) for each node.
     memberships = {node: tuple(probs) for node, probs in enumerate(P.memberships)}
 
-    return assignments, memberships
+    # Cluster sets.
+    cluster_sets = P.metastable_sets
+
+    return cluster_sets, assignments, memberships
