@@ -1,8 +1,7 @@
 from pyemma.msm import PCCA
-import networkx as nx
-import numpy as np
+#from gpvolve.utils import cluster_peaks
 
-def pcca(evomsm, c):
+class pcca(PCCA):
     """Runs PCCA++ [1] to compute a metastable decomposition of MSM states.
 
     Parameters
@@ -21,19 +20,11 @@ def pcca(evomsm, c):
     For more details and references: https://github.com/markovmodel/PyEMMA/blob/devel/pyemma/msm/models/msm.py
     """
 
-    # Get transtion matrix.
-    T = np.array(nx.attr_matrix(evomsm, edge_attr="fixation_probability", normalized=True)[0])
+    def __init__(self, evomsm, m, *args, **kwargs):
+        super().__init__(evomsm.transition_matrix, m, *args, **kwargs)
 
-    # Computer clusters
-    P = PCCA(T, c)
+        self.msm = evomsm
+        #self.cluster_peaks = cluster_peaks(self.msm, self.P.metastable_sets)  # After clustering one can use the cluster peaks as source and sink for tpt.
 
-    # Dictionary of cluster assignments for each node.
-    assignments = {node: cluster for node, cluster in enumerate(P.metastable_assignment)}
 
-    # Dictionary of cluster memberships (tuple of length c) for each node.
-    memberships = {node: tuple(probs) for node, probs in enumerate(P.memberships)}
 
-    # Cluster sets.
-    cluster_sets = P.metastable_sets
-
-    return cluster_sets, assignments, memberships

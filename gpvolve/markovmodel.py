@@ -1,5 +1,5 @@
 from gpgraph import GenotypePhenotypeGraph
-from .utils import self_probability
+from .utils import add_self_probability
 from .cluster import *
 import msmtools.analysis as mana
 
@@ -11,12 +11,21 @@ class EvoMSM(GenotypePhenotypeGraph):
     def __init__(self, gpm, *args, **kwargs):
         super().__init__(gpm, *args, **kwargs)
 
+        # Add self-looping edges (Not done by default in GenotypePhenotypeGraph)
+        self.self_edges = zip(*np.diag_indices(len(self.gpm.data.genotypes)))
+        self.add_edges_from(self.self_edges)
+
+        # Give every node an 'index' attribute, so nodes can be labeled with their index.
+        nx.set_node_attributes(self, name="index", values={node: node for node in self.nodes})
+
+        # Set transition matrix
+        self._transition_matrix = None
+
         # Set basic markov chain attributes that can't be attached to networkx object.
         self._timescales = None
         self._eigenvalues = None
         self._eigenvectors = None
-        self._clusters = None
-        self._total_flux = None
+        self._peaks = None
 
     def apply_selection(self, fitness_function, **params):
         """Compute fitness values from a user-defined phenotype-fitness function. A few basic functions can be found in
@@ -41,6 +50,7 @@ class EvoMSM(GenotypePhenotypeGraph):
         nx.set_node_attributes(self, name='fitness', values=values)
 
     def add_fixation_probability(self, fixation_model, **params):
+        """Calculate fixation probability along all edges and build transition matrix"""
         # Split all egdes into two tuples, each containing one node of each pair of nodes at the same position.
         nodepairs = list(zip(*self.edges))  # [(1, 4), (5, 8), (10, 25)] -> [(1, 5, 10), (4, 8, 25)]
 
@@ -48,59 +58,100 @@ class EvoMSM(GenotypePhenotypeGraph):
         fitness1 = np.array([self.node[node]['fitness'] for node in nodepairs[0]])
         fitness2 = np.array([self.node[node]['fitness'] for node in nodepairs[1]])
 
-        # Compute fixation probabilities and get edge keys.
-        probs = fixation_model(fitness1, fitness2, **params)
+        # Probability of a certain site mutating in a certain genotype when all sites have equal mutation probability.
+        mutation_prob = np.array([1/len(list(self.neighbors(node))) for node in nodepairs[0]])
+        # mutation_prob = np.array(1 / nx.adjacency_matrix(self).sum(axis=0))[0]  # number of neighbors, exclude
 
-        # Set edge attribute.
+        # Compute fixation probabilities and get edge keys.
+        probs = mutation_prob * fixation_model(fitness1, fitness2, **params)
+
+        # Set fixation probability for all edges. Values for the self-looping edges are incorrect at this point.
         edges = self.edges.keys()
         nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(edges, probs)))
 
-        # Add self-probability, i.e. the diagonal of the transition matrix.
-        self_probability(self)
+        # Calculate transition matrix diagonal, i.e. self-looping probability.
+        self.transition_matrix = add_self_probability(nx.attr_matrix(self, edge_attr="fixation_probability")[0])
 
-        # Check transition matrix.
-        if not mana.is_reversible(self.transition_matrix):
-            warnings.warn("The transition matrix is not reversible.")
-        if not mana.is_connected(self.transition_matrix):
-            warnings.warn("The transition matrix is not connected.")
+        # Update edge attributes of self-looping edges with transition matrix diagonal values.
+        diag_indices = np.diag_indices(self.transition_matrix.shape[0])
+        diag_vals = self.transition_matrix[diag_indices]
+        nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(self.self_edges, diag_vals)))
 
         # Update class attributes.
-        T = self.transition_matrix
-        self.stationary_distribution = mana.stationary_distribution(T)
-        self.timescales = mana.timescales(T)
-        self.eigenvalues = mana.eigenvalues(T)
-        self.eigenvectors = mana.eigenvectors(T)
+        self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
+        self.timescales = mana.timescales(self.transition_matrix)
+        self.eigenvalues = mana.eigenvalues(self.transition_matrix)
+        self.eigenvectors = mana.eigenvectors(self.transition_matrix)
+        self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
 
+    def step_function(self):
+        pass
 
-    def cluster(self, method, **params):
-        cluster_sets, assignments, memberships = method(self, **params)
+    def peaks(self):
+        """Find nodes without neighbors of higher fitness. Equal fitness allowed."""
+        if self._peaks:
+            return self._peaks
+        else:
+            peak_list = []
+            for node, fitness in enumerate(self.gpm.data.fitnesses):
+                # Get neighbors.
+                neighbors = list(self.neighbors(node))
+                # Remove self.
+                neighbors.remove(node)
+                # If fitness is higher than or equal to fitness of neighbors, it's a peak.
+                if fitness >= max([self.gpm.data.fitnesses[neighbor] for neighbor in neighbors]):
+                    peak_list.append(node)
 
-        if assignments:
-            nx.set_node_attributes(self, name="cluster", values=assignments)
+            # Find connected peaks.
+            peak_graph = self.subgraph(peak_list)
+            peaks = list(nx.connected_components(peak_graph.to_undirected()))
+            self._peaks = peaks
 
-        if memberships:
-            nx.set_node_attributes(self, name="memberships", values=memberships)
+            return self._peaks
 
-        if cluster_sets:
-            self._clusters = cluster_sets
+    def soft_peaks(self, error):
+        """Find nodes without neighbors of higher fitness. Equal fitness allowed."""
+        peak_list = []
+        fitnesses = pow(self.gpm.data.fitnesses, 10)
+        error = pow(error, 10)
+        floor_fitnesses = fitnesses - error
+        for node, fitness in enumerate(fitnesses):
+            # Get neighbors.
+            neighbors = list(self.neighbors(node))
+            # Remove self.
+            neighbors.remove(node)
+            # If fitness is higher than or equal to fitness of neighbors, it's a peak.
+            if fitness + error[node] >= max([floor_fitnesses[neighbor] for neighbor in neighbors]):
+                peak_list.append(node)
 
-    def flux(self, method, source, target, **params):
-        self.source = source
-        self.target = target
-        net_flux, total_flux, f_comm, b_comm = method(self.transition_matrix, self.source, self.target, **params)
+        # Find connected peaks.
+        peak_graph = self.subgraph(peak_list)
+        peaks = list(nx.connected_components(peak_graph.to_undirected()))
 
-        # Set attributes.
-        nx.set_edge_attributes(self, name="flux", values={edge: net_flux[edge[0], edge[1]] for edge in self.edges})
-        nx.set_node_attributes(self, name="forward_committor", values={node: qf for node, qf in enumerate(f_comm)})
-        nx.set_node_attributes(self, name="backward_committor", values={node: qb for node, qb in enumerate(b_comm)})
-        self._total_flux = total_flux
+        return peaks
+
 
     @property
     def transition_matrix(self):
-        try:
-            return np.array(nx.attr_matrix(self, edge_attr="fixation_probability", normalized=True)[0])
-        except KeyError:
-            print("Transition matrix doesn't exit yet. Add fixation probabilities first.")
+        if self._transition_matrix.any():
+            return self._transition_matrix
+        else:
+            try:
+                self._transition_matrix = np.array(nx.attr_matrix(self, edge_attr="fixation_probability", normalized=False)[0])
+            except KeyError:
+                print("Transition matrix doesn't exit yet. Add fixation probabilities first.")
+
+    @transition_matrix.setter
+    def transition_matrix(self, T):
+        # Check transition matrix.
+        if not mana.is_transition_matrix(T):
+            raise Exception("Not a transition matrix. Has to be square and rows must sum to one.")
+        if not mana.is_reversible(T):
+            warnings.warn("The transition matrix is not reversible.")
+        if not mana.is_connected(T):
+            warnings.warn("The transition matrix is not connected.")
+
+        self._transition_matrix = T
 
     @property
     def stationary_distribution(self):
@@ -166,6 +217,11 @@ class EvoMSM(GenotypePhenotypeGraph):
     def clusters(self):
         return self._clusters
 
+    @clusters.setter
+    def clusters(self, clusters):
+        if isinstance(clusters, list):
+            self._clusters = clusters
+
     @property
     def cluster_memberships(self):
         return nx.get_node_attributes(self, name="memberships")
@@ -211,6 +267,38 @@ class EvoMSM(GenotypePhenotypeGraph):
     @property
     def total_flux(self):
         return self._total_flux
+
+    # def peaks_(self):
+    #     """
+    #     A node is defined as peak if it has no neighbor (hamming_distance=1) with a higher fitness (identical
+    #     fitnesses are accepted).
+    #
+    #     """
+    #     ratio_matrix = np.nan_to_num(np.outer(np.array(self.gpm.phenotypes), 1 / np.array(self.gpm.phenotypes)))
+    #
+    #     # Set diagonal to 0.
+    #     np.fill_diagonal(ratio_matrix, 0)
+    #
+    #     # Get adjaceny matrix
+    #     A = nx.adjacency_matrix(self)
+    #     Ad = A.todense()
+    #     np.fill_diagonal((Ad), 0)
+    #
+    #     # Set non-neighbor entries zero by multiplying with adjacency matrix
+    #     ratio_matrix = np.multiply(ratio_matrix, Ad)
+    #
+    #     # Set ratios above 1 to zero, i.e. discard downhill moves, only keep uphill moves.
+    #     ratio_matrix[ratio_matrix >= 1] = 0
+    #
+    #     # Sum rows and find rows with sum 0. Those rows don't have uphill moves, hence they are peaks.
+    #     peak_list = np.where(ratio_matrix.sum(axis=1) == 0)[0]
+    #     print(peak_list)
+    #
+    #     peak_graph = self.subgraph(peak_list)
+    #
+    #     peaks = list(nx.connected_components(peak_graph.to_undirected()))
+    #
+    #     return peaks
 
 
 

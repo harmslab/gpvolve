@@ -18,7 +18,7 @@ def ratio(fitness1, fitness2):
 def moran(fitness1, fitness2, population_size):
     """Computes the fixation probability between two 1D arrays of fitnesses or two single fitnesses.
 
-    Paramteres
+    Parameters
     ----------
     fitness1 : 1D numpy.ndarray(dtype=float).
         Fitnesses of the first node of all edges. Fitness of genotype that the population is homogeneous for.
@@ -90,4 +90,43 @@ def mccandlish(fitness1, fitness2, population_size):
 
     fix = (1 - np.exp(-2 * (fitness2-fitness1))) / (1 - np.exp(-2 * population_size * (fitness2-fitness1)))
     return fix
+
+
+def bloom(preference1, preference2, beta=1):
+    """Computes probability (F(r_x->r_y)) of fixing amino acid x at site r when site r is amino acid y using
+    amino acid preference data from deep-mutational scanning experiments.
+
+    Parameters
+    ----------
+    preferences1 : 1D numpy.ndarray(dtype=float, int).
+        Array of amino acid preferences. The ith element corresponds to the preference of amino acid x at site r.
+
+    preferences2 : 1D numpy.ndarray(dtype=float, int).
+        Array of amino acid preferences. The ith element corresponds to the preference of amino acid y at site r.
+
+    beta : int, float (beta >= 0).
+        Free parameter that scales the stringency of amino acid preferences. Beta = 1: Equal stringency of deep
+        mutational scanning experiments and natural evolution. Beta < 1: Less stringent than natural selection.
+        Beta > 1: More stringent than natural selection.
+
+    Returns
+    -------
+    fix : 1D numpy.ndarray(dtype=float).
+        1D array of fixation probabilities.
+
+    References
+    ----------
+    Equation 3 - Jesse D. Bloom, Molecular Biology and Evolution, Volume 31, Issue 10, 1 October 2014, Pages 2753–2769
+    """
+    # Calculate preference ratios.
+    fix = preference2 / preference1
+
+    # Set fixation probability to one for neutral or beneficial mutations.
+    fix[fix > 1] = 1
+
+    # Apply beta factor.
+    fix = fix ** beta
+    return fix
+
+
 
