@@ -78,11 +78,11 @@ class EvoMSM(GenotypePhenotypeGraph):
         nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(self.self_edges, diag_vals)))
 
         # Update class attributes.
-        self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
-        self.timescales = mana.timescales(self.transition_matrix)
-        self.eigenvalues = mana.eigenvalues(self.transition_matrix)
-        self.eigenvectors = mana.eigenvectors(self.transition_matrix)
-        self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
+        # self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
+        # self.timescales = mana.timescales(self.transition_matrix)
+        # self.eigenvalues = mana.eigenvalues(self.transition_matrix)
+        # self.eigenvectors = mana.eigenvectors(self.transition_matrix)
+        # self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
 
     def step_function(self):
         pass
@@ -144,12 +144,13 @@ class EvoMSM(GenotypePhenotypeGraph):
     @transition_matrix.setter
     def transition_matrix(self, T):
         # Check transition matrix.
-        if not mana.is_transition_matrix(T):
-            raise Exception("Not a transition matrix. Has to be square and rows must sum to one.")
-        if not mana.is_reversible(T):
-            warnings.warn("The transition matrix is not reversible.")
-        if not mana.is_connected(T):
-            warnings.warn("The transition matrix is not connected.")
+        if mana.is_transition_matrix(T):
+            if not mana.is_reversible(T):
+                warnings.warn("The transition matrix is not reversible.")
+            if not mana.is_connected(T):
+                warnings.warn("The transition matrix is not connected.")
+        else:
+            warnings.warn("Not a transition matrix. Has to be square and rows must sum to one.")
 
         self._transition_matrix = T
 

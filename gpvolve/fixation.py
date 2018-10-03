@@ -1,6 +1,33 @@
 import numpy as np
-import math
+from scipy.sparse import csr_matrix
 
+def to_greedy(T):
+    """Turn transition matrix into 'greedy' transition matrix. Only the step with the highest positive fitness
+    difference is allowed (Prob. = 1), all other steps are not permitted (Prob. = 0)
+
+    Parameters
+    ----------
+    T : 2D numpy.ndarray.
+        Transition matrix where the highest value T(i->j) per row i should correspond to the step s(i->j) where j is
+        the neighbor of genotype i with the highest fitness. Can be obtained using the 'ratio' fixation function, where
+        transition probability T(i->j) is simply the ratio of fitness j over fitness i.
+
+    Returns
+    -------
+    M : 2D numpy.ndarray.
+        Transition matrix corresponding to a 'greedy random walk' on the genotype-phenotype map.
+
+    References
+    ----------
+    de Visser JA, Krug J. 2014. Empirical fitness landscapes and the predictability of evolution. Nature Reviews
+    Genetics 15:480–490.
+    """
+    indices = np.argmax(T, axis=1)
+    indptr = np.array(range(T.shape[0] + 1))
+    data = np.ones(T.shape[0])
+    M = csr_matrix((data, indices, indptr), shape=T.shape).toarray()
+
+    return M
 
 def strong_selection_weak_mutation(fitness1, fitness2):
     """Strong selection, weak mutation model."""
@@ -11,7 +38,16 @@ def strong_selection_weak_mutation(fitness1, fitness2):
 
 
 def ratio(fitness1, fitness2):
-    sij = fitness1/fitness2
+    """Fixation probability equals the ratio of new fitness over old fitness"""
+    sij = fitness2 / fitness1
+    return sij
+
+
+def equal_fixation(fitness1, fitness2):
+    """Only adaptive steps are allowed and all adaptive steps have the same probability"""
+    sij = fitness2 / fitness1
+    sij[sij <= 1] = 0
+    sij[sij > 1] = 1
     return sij
 
 
@@ -31,7 +67,7 @@ def moran(fitness1, fitness2, population_size):
 
     Returns
     -------
-    fix : 1D numpy.ndarray(dtype=float).
+    sij : 1D numpy.ndarray(dtype=float).
         Returns array with all fixation probabilities of the system in the order defined by fitness1 and fitness2.
 
     Notes
@@ -54,8 +90,8 @@ def moran(fitness1, fitness2, population_size):
         fitness2[index] = copy + copy / 10 ** 6
 
     # Calculate fixation probability.
-    fix = np.nan_to_num((1 - (fitness1/fitness2)) / (1 - pow(fitness1/fitness2, population_size)))
-    return fix
+    sij = np.nan_to_num((1 - (fitness1/fitness2)) / (1 - pow(fitness1/fitness2, population_size)))
+    return sij
 
 
 def mccandlish(fitness1, fitness2, population_size):
@@ -74,7 +110,7 @@ def mccandlish(fitness1, fitness2, population_size):
 
     Returns
     -------
-    fix : 1D numpy.ndarray(dtype=float).
+    sij : 1D numpy.ndarray(dtype=float).
         Returns array with all fixation probabilities of the system in the order defined by fitness1 and fitness2.
 
     References
@@ -88,8 +124,8 @@ def mccandlish(fitness1, fitness2, population_size):
         copy = fitness2[index]
         fitness2[index] = copy + copy / 10 ** 6
 
-    fix = (1 - np.exp(-2 * (fitness2-fitness1))) / (1 - np.exp(-2 * population_size * (fitness2-fitness1)))
-    return fix
+    sij = (1 - np.exp(-2 * (fitness2-fitness1))) / (1 - np.exp(-2 * population_size * (fitness2-fitness1)))
+    return sij
 
 
 def bloom(preference1, preference2, beta=1):
@@ -119,14 +155,14 @@ def bloom(preference1, preference2, beta=1):
     Equation 3 - Jesse D. Bloom, Molecular Biology and Evolution, Volume 31, Issue 10, 1 October 2014, Pages 2753–2769
     """
     # Calculate preference ratios.
-    fix = preference2 / preference1
+    sij = preference2 / preference1
 
     # Set fixation probability to one for neutral or beneficial mutations.
-    fix[fix > 1] = 1
+    sij[sij > 1] = 1
 
     # Apply beta factor.
-    fix = fix ** beta
-    return fix
+    sij = sij ** beta
+    return sij
 
 
 

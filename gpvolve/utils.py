@@ -1,6 +1,6 @@
 from scipy.sparse.csgraph import shortest_path
 import networkx as nx
-from scipy.sparse import dok_matrix
+from scipy.sparse import dok_matrix, csr_matrix
 import numpy as np
 
 
@@ -212,3 +212,10 @@ def cluster_positions(network, clusters, xaxis, yaxis, scale=None):
     return pos
 
 
+def max_prob_matrix(T, source=None, target=None):
+    """Transition matrix that only allows the step with maximum probability"""
+    indices = np.argmax(T, axis=1)
+    indptr = np.array(range(T.shape[0]+1))
+    data = np.ones(T.shape[0])
+    M = csr_matrix((data, indices, indptr), shape=T.shape).toarray()
+    return M

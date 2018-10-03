@@ -27,4 +27,8 @@ class pcca(PCCA):
         #self.cluster_peaks = cluster_peaks(self.msm, self.P.metastable_sets)  # After clustering one can use the cluster peaks as source and sink for tpt.
 
 
+class ClusterFromPaths(object):
+    def __init__(self):
+        pass
+
 
