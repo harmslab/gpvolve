@@ -5,3 +5,4 @@ from .old_markovmodel import EvoMarkovStateModel
 from .visualization import *
 from .utils import *
 from .fitness import *
+from .paths import *
