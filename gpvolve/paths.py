@@ -1,10 +1,11 @@
 from msmtools.flux import pathways as pw
 from gpmap.utils import hamming_distance
-from .utils import combinations, path_prob, rm_self_prob, add_self_probability
+from .utils import combinations, path_prob, rm_self_prob, add_self_probability, euclidean_distance
 
 import networkx as nx
 import numpy as np
 import warnings
+
 
 def flux_decomp(flux_matrix, source, target, fraction=1, maxiter=1000):
     paths, capacities = pw(flux_matrix, source, target, fraction=fraction, maxiter=maxiter)
@@ -111,7 +112,7 @@ def greedy(T, source=None):
     return path
 
 
-def gillespie(Tm, source=None, target=None, n_iter=None, interval=None, r_seed=None, rm_diag=False):
+def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_crit=0.01, r_seed=None, out='frac', rm_diag=False):
     """Stochastic path sampling. Probability of making a step equals its fixation probability
 
     Parameters
@@ -125,7 +126,7 @@ def gillespie(Tm, source=None, target=None, n_iter=None, interval=None, r_seed=N
     target : list (dtype=int).
         List of nodes at which the paths can end.
 
-    n_iter: int.
+    max_iter: int.
         Maximum number of iterations, i.e. paths that will be generated. Make sure that probability mass function of
         found paths has converged, i.e. increasing the number of iterations should'nt change the outcome significantly
         after convergence.
@@ -141,8 +142,9 @@ def gillespie(Tm, source=None, target=None, n_iter=None, interval=None, r_seed=N
 
     Returns
     -------
-    paths : dict.
-        Dictionary of paths (keys, dtype=tuple) and their count (values, dtype=int), i.e. how often they were sampled.
+    paths_at_intervals : dict.
+        Dictionary of dictionaries. Outer dictionary contains all paths and their counts or probability for each
+        interval. Inner dictionary is dictionary of paths (keys, dtype=tuple) and their count or probability.
 
     """
     T = Tm.copy()
@@ -151,21 +153,22 @@ def gillespie(Tm, source=None, target=None, n_iter=None, interval=None, r_seed=N
         T = rm_self_prob(T)
 
     if interval:
-        if n_iter % interval > 0:
-            raise Exception("The number of iterations ('n_iter') has to be a multiple of 'intervals'")
+        if max_iter % interval > 0:
+            raise Exception("The number of iterations ('max_iter') has to be a multiple of 'intervals'")
 
-        # Get intervals. E.g. n_iter=1000, interval=100 -> intervals=[100, 200, .., 1000]
-        intervals = [interval * steps for steps in range(1, n_iter // interval + 1)]
+        # Get intervals. E.g. max_iter=1000, interval=100 -> intervals=[100, 200, .., 1000]
+        intervals = [interval * steps for steps in range(1, max_iter // interval + 1)]
     else:
-        intervals = [n_iter]
+        intervals = [max_iter]
 
     # Set random seed for repeatability.
     np.random.seed(seed=r_seed)
     counter = 0
+    # Dictionary that contains all paths and their counts for each interval.
+    paths_at_intervals = {0: {}}
     # Dictionary that counts how often paths appeared (indexed by path).
-    paths_at_intervals = {}
     paths = {}
-    while counter < n_iter:
+    while counter < max_iter:
         counter += 1
         path = [source]
 
@@ -191,6 +194,18 @@ def gillespie(Tm, source=None, target=None, n_iter=None, interval=None, r_seed=N
             paths[tuple(path)] = 1
 
         if counter in intervals:
-            paths_at_intervals[counter] = paths.copy()
+            if out == 'count':
+                paths_at_intervals[counter] = paths.copy()
 
+            elif out == 'frac':
+                count_sum = sum(paths.values())
+                paths_at_intervals[counter] = {path: counts/count_sum for path, counts in paths.items()}
+
+                # Use the euclidean distance between two probability mass functions as convergence proxy.
+                conv_metric = euclidean_distance(paths_at_intervals[counter - interval], paths_at_intervals[counter])
+                if conv_metric < conv_crit:
+                    print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
+                    return paths_at_intervals
+
+    print("Did not converge after %s iterations. Last eucl. distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
     return paths_at_intervals

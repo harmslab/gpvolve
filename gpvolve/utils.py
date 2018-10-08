@@ -3,6 +3,50 @@ import networkx as nx
 from scipy.sparse import dok_matrix, csr_matrix
 import numpy as np
 
+def euclidean_distance(prev_pmf, current_pmf):
+    """Calc. euclidean distance between two probability mass function (pmf). Both pmf have to have the same order
+    but not the same length -> current_pmf is allowed to to be longer.
+    """
+    euclid_dist = 0
+    # Calc. euclidean distance of each path in current pmf to pmf at step current - k (current - previous).
+    for val in current_pmf:
+        try:
+            euclid_dist += abs(current_pmf[val] - prev_pmf[val])
+        # If a new path has been sampled since last lag interval, euclidean distance = prob. of that path.
+        except KeyError:
+            euclid_dist += current_pmf[val]
+    return euclid_dist
+
+
+def check_convergence(pmf_dict, conv_func, **params):
+    """Calc. for a ordered seqeuence of probability mass functions.
+
+    Parameters
+    ----------
+    pmf_dict : dict.
+        Dictionary of dictionaries. The outer dict. contains the sequence of probability mass functions (dict.) which is
+        checked for convergence. The probability mass functions have to be in the form of an ordered dictionary, where
+        the key corresponds to different values of a random variable and the values correspond to the probability
+        (between 0 and 1) of the variable to take that value.
+
+    conv_func : Python function.
+        Function that is going to be used to assess the similarity of two probability mass functions. Has to take two
+        dictionaries (prob. mass func.) as first two arguments
+
+    Returns
+    -------
+    conv : list.
+        List containing the similarity values for all consecutive pairs of probability mass functions.
+    """
+    intervals = list(pmf_dict.keys())
+    conv = []
+    for i in range(1, len(intervals)):
+        prev_pmf = pmf_dict[intervals[i - 1]]
+        curr_pmf = pmf_dict[intervals[i]]
+        conv.append(conv_func(prev_pmf, curr_pmf, **params))
+
+    return conv
+
 
 def rm_self_prob(tm):
     """Remove transition matrix diagonal and renormalize rows to 1"""
