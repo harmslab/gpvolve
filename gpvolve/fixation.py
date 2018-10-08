@@ -171,6 +171,7 @@ def bloom(preference1, preference2, beta=1):
 
     # Apply beta factor.
     sij = sij ** beta
+
     return sij
 
 

@@ -14,7 +14,7 @@ def flux_decomp(flux_matrix, source, target, fraction=1, maxiter=1000):
 
     return pathways
 
-def exhaustive_enumeration(graph, source, target, edge_attr, normalize=True, rm_diag=False):
+def exhaustive_enumeration(graph, source, target, edge_attr, normalize=False, rm_diag=False):
     """Calculate the probabiliy of all forward paths between source and target
 
     Parameters
@@ -132,7 +132,7 @@ def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_c
         after convergence.
 
     interval: int.
-        Interval defines
+        After each interval the sampling is checked for convergence.
 
     r_seed: int.
         Random seed. The result of two executions of this algorithm will be identical if the same random seed is used.
@@ -148,6 +148,12 @@ def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_c
 
     """
     T = Tm.copy()
+
+    if not max_iter:
+        max_iter = float('inf')
+        if not interval:
+            raise Exception("Have to provide either maximum number of iteratons ('max_iter') or 'interval'")
+
     if rm_diag:
         # Remove matrix diagonal and re-normalize to 1 because we aren't interested in self-looping.
         T = rm_self_prob(T)
@@ -156,10 +162,11 @@ def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_c
         if max_iter % interval > 0:
             raise Exception("The number of iterations ('max_iter') has to be a multiple of 'intervals'")
 
-        # Get intervals. E.g. max_iter=1000, interval=100 -> intervals=[100, 200, .., 1000]
-        intervals = [interval * steps for steps in range(1, max_iter // interval + 1)]
-    else:
-        intervals = [max_iter]
+    #     # Get intervals. E.g. max_iter=1000, interval=100 -> intervals=[100, 200, .., 1000]
+    #     intervals = [interval * steps for steps in range(1, max_iter // interval + 1)]
+    # else:
+    #     intervals = [max_iter]
+
 
     # Set random seed for repeatability.
     np.random.seed(seed=r_seed)
@@ -193,7 +200,7 @@ def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_c
         except KeyError:
             paths[tuple(path)] = 1
 
-        if counter in intervals:
+        if counter % interval == 0:
             if out == 'count':
                 paths_at_intervals[counter] = paths.copy()
 
@@ -203,9 +210,10 @@ def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_c
 
                 # Use the euclidean distance between two probability mass functions as convergence proxy.
                 conv_metric = euclidean_distance(paths_at_intervals[counter - interval], paths_at_intervals[counter])
+                print(counter, conv_metric)
                 if conv_metric < conv_crit:
                     print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
-                    return paths_at_intervals
+                    return paths_at_intervals[counter]
 
     print("Did not converge after %s iterations. Last eucl. distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
-    return paths_at_intervals
+    return paths_at_intervals[counter]

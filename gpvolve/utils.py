@@ -3,6 +3,10 @@ import networkx as nx
 from scipy.sparse import dok_matrix, csr_matrix
 import numpy as np
 
+def paths_to_endnode(paths):
+    endnode_dict = {path[-1]: prob for path, prob in paths.items()}
+    return endnode_dict
+
 def euclidean_distance(prev_pmf, current_pmf):
     """Calc. euclidean distance between two probability mass function (pmf). Both pmf have to have the same order
     but not the same length -> current_pmf is allowed to to be longer.
@@ -158,7 +162,6 @@ def add_self_probability(T):
     row_sums = T.sum(axis=1)
     row, col = np.diag_indices(T.shape[0])
     T[row, col] = np.ones(row_sums.shape[0]) - row_sums
-    print(T)
     return T
 
 

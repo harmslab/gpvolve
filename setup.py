@@ -11,7 +11,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [ ]
+requirements = ['numpy', 'cython', 'networkx', 'msmtools', 'gpmap', 'gpgraph', 'matplotlib']
 
 setup_requirements = ['pytest-runner', ]
 

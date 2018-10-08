@@ -191,7 +191,6 @@ class EvoMSM(GenotypePhenotypeGraph):
             return stat_dist
         else:
             stat_dist = {node: prob for node, prob in enumerate(mana.stationary_distribution(self.transition_matrix))}
-            print(stat_dist)
             nx.set_node_attributes(self, name="stationary_distribution", values=stat_dist)
 
             return nx.get_node_attributes(self, name="stationary_distribution")
