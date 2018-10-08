@@ -6,10 +6,11 @@ import numpy as np
 
 def rm_self_prob(tm):
     """Remove transition matrix diagonal and renormalize rows to 1"""
-    np.fill_diagonal(tm, 0)
-    row_sums = tm.sum(axis=1)
-    tm_norm = tm / row_sums[:, np.newaxis]
-    return tm_norm
+    T = tm.copy()
+    np.fill_diagonal(T, 0)
+    row_sums = T.sum(axis=1)
+    T_norm = T / row_sums[:, np.newaxis]
+    return T_norm
 
 
 def to_dok_matrix(matrix):

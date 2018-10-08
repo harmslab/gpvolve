@@ -1,10 +1,10 @@
 from msmtools.flux import pathways as pw
 from gpmap.utils import hamming_distance
-from .utils import combinations, path_prob, rm_self_prob
+from .utils import combinations, path_prob, rm_self_prob, add_self_probability
 
 import networkx as nx
 import numpy as np
-
+import warnings
 
 def flux_decomp(flux_matrix, source, target, fraction=1, maxiter=1000):
     paths, capacities = pw(flux_matrix, source, target, fraction=fraction, maxiter=maxiter)
@@ -13,31 +13,66 @@ def flux_decomp(flux_matrix, source, target, fraction=1, maxiter=1000):
 
     return pathways
 
-def exhaustive_enumeration(msm, source, target):
+def exhaustive_enumeration(graph, source, target, edge_attr, normalize=True, rm_diag=False):
     """Calculate the probabiliy of all forward paths between source and target
 
     Parameters
     ----------
-    msm : EvoMSM object.
-        EvoMSM class object with a transition matrix.
+    graph : networkx.DiGraph.
+        networkx.DiGraph. Can be build from a transition matrix (numpy matrix/array) using networkx.from_numpy_matrix.
 
     source : int.
         Starting node for all paths
 
     target : list (dtype=int).
         List of nodes at which the paths can end.
+
+    edge_attr : str.
+        Edge attribute that is used to build transition matrix. Only use 'weight' if it's an explicitly defined edge
+        attribute, otherwise networkx will build an adjacency matrix instead of a transition matrix.
+
+    normalize : bool.
+        If True, normalize each path probability by the sum of all probabilities, so they sum to 1.
+
+    rm_diag : bool.
+        If True, the matrix diagonal, i.e. the probability of self-looping, is set to 0. This will skew the path
+        probabilities.
+
+    Returns
+    -------
+    path_probs : dict.
+        Dictionary with paths (dtype=tuple) as dict. keys and probabilities as dict. values.
     """
+    # Check arguments.
+    if edge_attr == 'weight':
+        print("If edge_attr='weight', the transition matrix might be a simple adjacency matrix, unless 'weight' is an explicitly defined edge attribute of your DiGraph.")
 
     # Get all possible paths between all possible pairs of source and target nodes.
     all_paths = []
     pairs = combinations(source, target)
     for pair in pairs:
-        all_paths.extend(list(nx.all_shortest_paths(msm, pair[0], pair[1])))
+        all_paths.extend(list(nx.all_shortest_paths(graph, pair[0], pair[1])))
+
+    # Build transition matrix.
+    try:
+        P = np.array(nx.attr_matrix(graph, edge_attr)[0])
+        T = add_self_probability(P)
+    except KeyError:
+        raise Exception("Edge attribute %s does not exist. Add edge attribute or choose existing." % edge_attr)
+
+    if rm_diag:
+        T = rm_self_prob(T)
 
     # Calculate all path probabilities.
     path_probs = {}
     for path in all_paths:
-        path_probs[tuple(path)] = path_prob(path, msm.transition_matrix)
+        path_probs[tuple(path)] = path_prob(path, T)
+
+    if normalize:
+        # Normalize, i.e. divide by the sum of all path probabilities.
+        p_sum = sum(path_probs.values())
+        for path, prob in path_probs.items():
+            path_probs[path] = prob/p_sum
 
     return path_probs
 
@@ -56,6 +91,11 @@ def greedy(T, source=None):
     target : list (dtype=int).
         List of nodes at which the paths can end.
 
+    Returns
+    -------
+    path : list.
+        The path from source to a peak (list of integers). Integers correspond to transition matrix indices.
+
     Notes
     -----
     Same can be achieved with one iteration of the gillespie algorithm if the transition matrix contains only one
@@ -71,12 +111,12 @@ def greedy(T, source=None):
     return path
 
 
-def gillespie(T, source=None, target=None, n_iter=None, r_seed=None, rm_diag=True):
+def gillespie(Tm, source=None, target=None, n_iter=None, interval=None, r_seed=None, rm_diag=False):
     """Stochastic path sampling. Probability of making a step equals its fixation probability
 
     Parameters
     ----------
-    T : 2D numpy.ndarray
+    Tm : 2D numpy.ndarray
         Transition matrix where element T(ij) should correspond to fixation probability from genotype i to j.
 
     source : int.s
@@ -90,34 +130,67 @@ def gillespie(T, source=None, target=None, n_iter=None, r_seed=None, rm_diag=Tru
         found paths has converged, i.e. increasing the number of iterations should'nt change the outcome significantly
         after convergence.
 
+    interval: int.
+        Interval defines
+
     r_seed: int.
         Random seed. The result of two executions of this algorithm will be identical if the same random seed is used.
 
     rm_diag: bool (default=True).
         If True, the probability of making step P(i->i) is set to 0 and all P(i->j) are renormalized to sum to 1.
+
+    Returns
+    -------
+    paths : dict.
+        Dictionary of paths (keys, dtype=tuple) and their count (values, dtype=int), i.e. how often they were sampled.
+
     """
+    T = Tm.copy()
     if rm_diag:
-        # Remove matrix diagonal and renormalize to 1.
+        # Remove matrix diagonal and re-normalize to 1 because we aren't interested in self-looping.
         T = rm_self_prob(T)
+
+    if interval:
+        if n_iter % interval > 0:
+            raise Exception("The number of iterations ('n_iter') has to be a multiple of 'intervals'")
+
+        # Get intervals. E.g. n_iter=1000, interval=100 -> intervals=[100, 200, .., 1000]
+        intervals = [interval * steps for steps in range(1, n_iter // interval + 1)]
+    else:
+        intervals = [n_iter]
 
     # Set random seed for repeatability.
     np.random.seed(seed=r_seed)
     counter = 0
     # Dictionary that counts how often paths appeared (indexed by path).
+    paths_at_intervals = {}
     paths = {}
     while counter < n_iter:
         counter += 1
         path = [source]
-        while path[-1] not in target:
-            curr = path[-1]
-            # Get random number between 0 and 1
-            r = np.random.uniform()
-            # Choose next state from probability mass function of current states transition matrix row.
-            path.append(np.random.choice(np.nonzero(T[curr])[0], p=T[curr][np.nonzero(T[curr])]))
 
+        while path[-1] not in target:
+            state = path[-1]
+
+            # Indices of states with nonzero transition probability.
+            nonzero_ind = np.nonzero(T[state])[0]
+            # Probability mass function for states with nonzero transition probability.
+            probs = T[state][np.nonzero(T[state])]
+
+            # As long as the state has not changed, continue to randomly pick new state from the prob. distribution.
+            while state == path[-1]:
+                # Choose next state from probability mass function of states with nonzero transition probability.
+                state = np.random.choice(nonzero_ind, p=probs)
+
+            path.append(state)
+
+        # Count of sampled path + 1.
         try:
             paths[tuple(path)] += 1
         except KeyError:
             paths[tuple(path)] = 1
 
-    return paths
+        if counter in intervals:
+            paths_at_intervals[counter] = paths.copy()
+
+    return paths_at_intervals

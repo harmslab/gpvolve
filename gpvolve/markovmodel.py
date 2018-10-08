@@ -88,7 +88,19 @@ class EvoMSM(GenotypePhenotypeGraph):
         pass
 
     def peaks(self):
-        """Find nodes without neighbors of higher fitness. Equal fitness allowed."""
+        """Find nodes without neighbors of higher fitness. Equal fitness allowed.
+
+        Parameters
+        ----------
+        self : EvoMSM object.
+            EvoMSM object with transition matrix.
+
+        Returns
+        -------
+        _peaks : list of sets.
+            List of peaks. Each peak is a set and can contain multiple nodes if it's a flat peak of nodes with identical
+            fitness.
+        """
         if self._peaks:
             return self._peaks
         else:
@@ -110,7 +122,24 @@ class EvoMSM(GenotypePhenotypeGraph):
             return self._peaks
 
     def soft_peaks(self, error):
-        """Find nodes without neighbors of higher fitness. Equal fitness allowed."""
+        """Find nodes without neighbors of higher fitness. Equal fitness allowed. Takes into account error, e.g. if
+        fitness1 has one neighbor (fitness2) with higher fitness, fitness1 is still considered a peak if
+        fitness1 + error is higher than or equal to fitness2 - error.
+
+        Parameters
+        ----------
+        self : EvoMSM object.
+            EvoMSM object with transition matrix.
+
+        error : list
+            List with one error value for each fitness. Must be in same order as fitness/phenotypes array.
+
+        Returns
+        -------
+        peaks : list of sets.
+            List of peaks. Each peak is a set and can contain multiple nodes if it's a flat peak of nodes with identical
+            fitness or nodes with indistinguishable fitness within the margin of error.
+        """
         peak_list = []
         fitnesses = pow(self.gpm.data.fitnesses, 10)
         error = pow(error, 10)
