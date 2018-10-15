@@ -20,6 +20,7 @@ def linear_skew(phenotypes, selection_gradient):
     norm_fitness = [fit / max_fit for fit in fitness]
     return norm_fitness
 
+
 def one_to_one(phenotypes):
     """One-to-one mapping of phenotypes to fitnesses."""
     return phenotypes

@@ -2,6 +2,43 @@ from msmtools.flux import tpt as TPT
 
 
 class tpt(object):
+    """Class for calculating reactive flux of a markov state model.
+
+    Parameters
+    ----------
+    EvoMSM : EvoMSM object.
+        EvoMSM object with an ergodic transition matrix.
+
+    source : list.
+        List of nodes that will be treated as flux source.
+
+    target : list.
+        List of nodes that will be treated as flux sink.
+
+    Attributes
+    ----------
+    net_flux : 2D numpy.ndarray.
+        Net flux between all pairs of genotypes/nodes.
+
+    total_flux : float.
+        The total probability flux that leaves source and ends at sink without passing through source again.
+
+    forward_committor: 1D numpy.ndarray.
+        Forward committor values for all nodes.
+
+    backward_committor: 1D numpy.ndarray.
+        Backward committor values for all nodes.
+
+    Notes
+    -----
+    This class can be seen as a wrapper for the msmtools function tpt. Please read the msmtools/flux docs and the
+    references therein [1].
+
+    References
+    ----------
+    [1] http://www.emma-project.org/v2.2.7/api/generated/msmtools.flux.tpt.html
+
+    """
     def __init__(self, EvoMSM, source, target):
         self.msm = EvoMSM
         self.source = source
@@ -14,6 +51,18 @@ class tpt(object):
         self.backward_committor = self.ReactiveFlux.backward_committor
 
     def coarse_grain(self, sets):
+        """Coarse grain flux based on a list of sets, which can represent metastable clusters
+
+        Parameters
+        ----------
+        sets : list.
+            List of set
+
+        Returns
+        -------
+        coarse: Coarse grained ReactiveFlux object.
+
+        """
         sets, coarse = self.ReactiveFlux.coarse_grain(sets)
         coarse.msm = self.msm
         coarse.sets = sets

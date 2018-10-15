@@ -8,6 +8,31 @@ import networkx as nx
 import numpy as np
 
 class EvoMSM(GenotypePhenotypeGraph):
+    """Class for building and analyzing evolutionary markov state models
+
+    Parameters
+    ----------
+    gpm : GenotypePhenotypeMap object.
+        A genotype-phenotype map object.
+
+    Attributes
+    ----------
+    transition_matrix : 2D numpy.ndarray.
+        The transition matrix that defines the probability of all mutations fixing in all backgrounds.
+
+    timescales : numpy.ndarray.
+        The relaxation timescales of the markov system calculated by eigendecomposition of the transition matrix.
+
+    eigenvalues : numpy.ndarray.
+        The eigenvalues of the markov system calculated by eigendecomposition of the transition matrix.
+
+    eigenvectors :
+        The eigenvectors of the markov system calculated by eigendecomposition of the transition matrix.
+
+    peaks :
+        Fitness peaks. A fitness peak is defined as nodes with a fitness higher than all its neighboring nodes.
+
+    """
     def __init__(self, gpm, *args, **kwargs):
         super().__init__(gpm, *args, **kwargs)
 
@@ -50,7 +75,20 @@ class EvoMSM(GenotypePhenotypeGraph):
         nx.set_node_attributes(self, name='fitness', values=values)
 
     def add_fixation_probability(self, fixation_model, **params):
-        """Calculate fixation probability along all edges and build transition matrix"""
+        """Calculate fixation probability along all edges and build transition matrix
+
+        Parameters
+        ----------
+        fixation_model : Python function.
+            A function that takes two numpy arrays of fitnesses and returns the fixation probability between the iths
+            fitness of the first array and the iths fitness of the second array.
+
+        Returns
+        -------
+        Nothing : None.
+            Sets transition_matrix attribute and networkx.DiGraph network edge attributes automatically.
+
+        """
         # Split all egdes into two tuples, each containing one node of each pair of nodes at the same position.
         nodepairs = list(zip(*self.edges))  # [(1, 4), (5, 8), (10, 25)] -> [(1, 5, 10), (4, 8, 25)]
 
@@ -76,13 +114,6 @@ class EvoMSM(GenotypePhenotypeGraph):
         diag_indices = np.diag_indices(self.transition_matrix.shape[0])
         diag_vals = self.transition_matrix[diag_indices]
         nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(self.self_edges, diag_vals)))
-
-        # Update class attributes.
-        # self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
-        # self.timescales = mana.timescales(self.transition_matrix)
-        # self.eigenvalues = mana.eigenvalues(self.transition_matrix)
-        # self.eigenvectors = mana.eigenvectors(self.transition_matrix)
-        # self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
 
     def step_function(self):
         pass
@@ -162,6 +193,7 @@ class EvoMSM(GenotypePhenotypeGraph):
 
     @property
     def transition_matrix(self):
+        """Transition matrix of the """
         if self._transition_matrix.any():
             return self._transition_matrix
         else:
@@ -172,6 +204,13 @@ class EvoMSM(GenotypePhenotypeGraph):
 
     @transition_matrix.setter
     def transition_matrix(self, T):
+        """Set transition matrix
+
+        Parameters
+        ----------
+        T : 2D numpy.ndarray.
+            Transition matrix. Should be row stochastic and ergodic.
+        """
         # Check transition matrix.
         if mana.is_transition_matrix(T):
             if not mana.is_reversible(T):
@@ -219,7 +258,7 @@ class EvoMSM(GenotypePhenotypeGraph):
     @property
     def eigenvalues(self):
         """Get the eigenvalues of the transition matrix"""
-        if self._eigenvalues.any():
+        if isinstance(self._eigenvalues, np.ndarray):
             return self._eigenvalues
         else:
             self._eigenvalues = mana.eigenvalues(self.transition_matrix)

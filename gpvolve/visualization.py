@@ -3,43 +3,21 @@ import matplotlib.pyplot as plt
 from gpgraph.draw import *
 from scipy import sparse
 
-def plot_membership(memberships):
-    # bar/scatt plot. Each genotype plotted at x=their assigned cluster(largest membership) and y=that membership prob.)
-    pass
-
-def phenotype_fitness(phenotypes, fitnesses):
-    pass
 
 def plot_timescales(timescales, figsize=None, n=None, color='orange'):
+    """Simple bar plot of a sequence of values"""
     fig, ax = plt.subplots(figsize=figsize)
     ax.bar([i for i in range(0, len(timescales[:n]))], timescales[:n], color=color)
     ax.set_title("Timescales")
     return fig, ax
 
 def plot_eigenvalues(eigenvalues, figsize=None, n=None, color='orange'):
+    """Simple bar plot of a sequence of values"""
     fig, ax = plt.subplots(figsize=figsize)
     ax.bar([i for i in range(0, len(eigenvalues[:n]))], eigenvalues[:n], color=color)
     ax.set_title("Eigenvalues")
     return fig, ax
 
-# def plot_clusters(network, clusters, scale=1, figsize=(10,10)):
-#     print(clusters)
-#     pos = cluster_positions(network, clusters, scale=scale)
-#     print(pos)
-#
-#     #fig, ax = plt.subplots(figsize=figsize)
-#     fig, ax = draw_flattened(network, pos=pos)
-#
-#
-#     ax.spines['left'].set_visible(True)
-#     ax.spines['bottom'].set_visible(True)
-#     ax.set_xticks([i for i in np.arange(0, 1.1, 0.1)])
-#     ax.set_yticks([i for i in np.arange(0, 1.1, 0.05)])
-#     ax.autoscale(enable=True)
-#     ax.set_xlabel("Forward Committor", size=15)
-#     ax.set_ylabel("Fitness", size=15)
-#
-#     return fig, ax
 
 def plot_network(
     network,
@@ -531,3 +509,22 @@ def plot_clusters(
     return fig, ax
 
 
+
+# def plot_clusters(network, clusters, scale=1, figsize=(10,10)):
+#     print(clusters)
+#     pos = cluster_positions(network, clusters, scale=scale)
+#     print(pos)
+#
+#     #fig, ax = plt.subplots(figsize=figsize)
+#     fig, ax = draw_flattened(network, pos=pos)
+#
+#
+#     ax.spines['left'].set_visible(True)
+#     ax.spines['bottom'].set_visible(True)
+#     ax.set_xticks([i for i in np.arange(0, 1.1, 0.1)])
+#     ax.set_yticks([i for i in np.arange(0, 1.1, 0.05)])
+#     ax.autoscale(enable=True)
+#     ax.set_xlabel("Forward Committor", size=15)
+#     ax.set_ylabel("Fitness", size=15)
+#
+#     return fig, ax

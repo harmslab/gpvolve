@@ -38,27 +38,6 @@ def to_greedy(transition_matrix):
 
     return M
 
-def strong_selection_weak_mutation(fitness1, fitness2):
-    """Strong selection, weak mutation model."""
-    sij = (fitness2 - fitness1) / fitness1
-    if sij < 0:
-        sij = 0
-    return 1 - np.exp(-sij)
-
-
-def ratio(fitness1, fitness2):
-    """Fixation probability equals the ratio of new fitness over old fitness"""
-    sij = fitness2 / fitness1
-    return sij
-
-
-def equal_fixation(fitness1, fitness2):
-    """Only adaptive steps are allowed and all adaptive steps have the same probability"""
-    sij = fitness2 / fitness1
-    sij[sij <= 1] = 0
-    sij[sij > 1] = 1
-    return sij
-
 
 def moran(fitness1, fitness2, population_size):
     """Computes the fixation probability between two 1D arrays of fitnesses or two single fitnesses.
@@ -174,5 +153,26 @@ def bloom(preference1, preference2, beta=1):
 
     return sij
 
+
+def strong_selection_weak_mutation(fitness1, fitness2):
+    """Strong selection, weak mutation model."""
+    sij = (fitness2 - fitness1) / fitness1
+    if sij < 0:
+        sij = 0
+    return 1 - np.exp(-sij)
+
+
+def ratio(fitness1, fitness2):
+    """Fixation probability equals the ratio of new fitness over old fitness"""
+    sij = fitness2 / fitness1
+    return sij
+
+
+def equal_fixation(fitness1, fitness2):
+    """Only adaptive steps are allowed and all adaptive steps have the same probability"""
+    sij = fitness2 / fitness1
+    sij[sij <= 1] = 0
+    sij[sij > 1] = 1
+    return sij
 
 

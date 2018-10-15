@@ -8,6 +8,7 @@ import warnings
 
 
 def flux_decomp(flux_matrix, source, target, fraction=1, maxiter=1000):
+    """Decomposition of flux into pathways"""
     paths, capacities = pw(flux_matrix, source, target, fraction=fraction, maxiter=maxiter)
 
     pathways = {tuple(path[0]): path[1] for path in zip(paths, capacities)}
@@ -112,7 +113,7 @@ def greedy(T, source=None):
     return path
 
 
-def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_crit=0.01, r_seed=None, out='frac', rm_diag=False):
+def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, conv_crit=0.01, r_seed=None, out='frac', rm_diag=False):
     """Stochastic path sampling. Probability of making a step equals its fixation probability
 
     Parameters
@@ -210,10 +211,10 @@ def gillespie(Tm, source=None, target=None, max_iter=None, interval=None, conv_c
 
                 # Use the euclidean distance between two probability mass functions as convergence proxy.
                 conv_metric = euclidean_distance(paths_at_intervals[counter - interval], paths_at_intervals[counter])
-                print(counter, conv_metric)
+
                 if conv_metric < conv_crit:
                     print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
                     return paths_at_intervals[counter]
 
     print("Did not converge after %s iterations. Last eucl. distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
-    return paths_at_intervals[counter]
+    return paths_at_intervals[counter], paths_at_intervals
