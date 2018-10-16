@@ -1,5 +1,5 @@
 from msmtools.analysis import pcca
-#from gpvolve.utils import cluster_peaks
+from gpvolve.markovmodel import GenotypePhenotypeMSM
 
 class PCCA(object):
     """Runs PCCA++ [1] to compute a metastable decomposition of MSM states.
@@ -24,7 +24,7 @@ class PCCA(object):
         self.memberships = pcca(evomsm.transition_matrix, m)
 
 
-class ClusterFromPaths(object):
+class GenotypePhenotypeClusters(object):
     def __init__(self):
         pass
 

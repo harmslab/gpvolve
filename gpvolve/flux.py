@@ -1,5 +1,40 @@
 from msmtools.flux import tpt as TPT
 
+def paths_prob_to_edges_flux(paths_prob):
+    """Chops a list of paths into its edges, and calculate the probability
+    of that edge across all paths.
+
+    Parameters
+    ----------
+    paths: list of tuples
+        list of the paths.
+
+    Returns
+    -------
+    edge_flux: dictionary
+        Edge tuples as keys, and probabilities as values.
+    """
+    edge_flux = {}
+    for path, prob in paths_prob.items():
+        edges = []
+        for i in range(len(path)-1):
+            # Get edge
+            edges.append((path[i], path[i+1]))
+
+        # If paths loop over same pair of states multiple times per path, the probability shouldnt be summed.
+        uniq_edges = set(edges)
+
+        for edge in uniq_edges:
+            # Get path probability to edge.
+            if edge in edge_flux:
+                edge_flux[edge] += prob
+
+            # Else start at zero
+            else:
+                edge_flux[edge] = prob
+
+    return edge_flux
+
 
 class tpt(object):
     """Class for calculating reactive flux of a markov state model.

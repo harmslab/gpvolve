@@ -113,7 +113,7 @@ def greedy(T, source=None):
     return path
 
 
-def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, conv_crit=0.01, r_seed=None, out='frac', rm_diag=False):
+def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, conv_crit=0.01, r_seed=None, out='frac', rm_diag=False, mute=False):
     """Stochastic path sampling. Probability of making a step equals its fixation probability
 
     Parameters
@@ -163,12 +163,6 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
         if max_iter % interval > 0:
             raise Exception("The number of iterations ('max_iter') has to be a multiple of 'intervals'")
 
-    #     # Get intervals. E.g. max_iter=1000, interval=100 -> intervals=[100, 200, .., 1000]
-    #     intervals = [interval * steps for steps in range(1, max_iter // interval + 1)]
-    # else:
-    #     intervals = [max_iter]
-
-
     # Set random seed for repeatability.
     np.random.seed(seed=r_seed)
     counter = 0
@@ -213,7 +207,8 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
                 conv_metric = euclidean_distance(paths_at_intervals[counter - interval], paths_at_intervals[counter])
 
                 if conv_metric < conv_crit:
-                    print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
+                    if not mute:
+                        print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
                     return paths_at_intervals[counter]
 
     print("Did not converge after %s iterations. Last eucl. distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))

@@ -1,13 +1,12 @@
 from gpgraph import GenotypePhenotypeGraph
 from .utils import add_self_probability
-from .cluster import *
 import msmtools.analysis as mana
 
 import warnings
 import networkx as nx
 import numpy as np
 
-class EvoMSM(GenotypePhenotypeGraph):
+class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
     """Class for building and analyzing evolutionary markov state models
 
     Parameters
@@ -51,6 +50,9 @@ class EvoMSM(GenotypePhenotypeGraph):
         self._eigenvalues = None
         self._eigenvectors = None
         self._peaks = None
+        self._forward_committor = None
+        self._backward_committor = None
+
 
     def apply_selection(self, fitness_function, **params):
         """Compute fitness values from a user-defined phenotype-fitness function. A few basic functions can be found in
@@ -115,8 +117,6 @@ class EvoMSM(GenotypePhenotypeGraph):
         diag_vals = self.transition_matrix[diag_indices]
         nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(self.self_edges, diag_vals)))
 
-    def step_function(self):
-        pass
 
     def peaks(self):
         """Find nodes without neighbors of higher fitness. Equal fitness allowed.
@@ -190,7 +190,6 @@ class EvoMSM(GenotypePhenotypeGraph):
 
         return peaks
 
-
     @property
     def transition_matrix(self):
         """Transition matrix of the """
@@ -245,7 +244,7 @@ class EvoMSM(GenotypePhenotypeGraph):
     @property
     def timescales(self):
         """Get the relaxation timescales corresponding to the eigenvalues in arbitrary units."""
-        if self._timescales.any():
+        if isinstance(self._timescales, np.ndarray):
             return self._timescales
         else:
             self._timescales = mana.timescales(self.transition_matrix)
@@ -281,22 +280,36 @@ class EvoMSM(GenotypePhenotypeGraph):
     def eigenvectors(self, eigenvectors):
         self._eigenvectors = eigenvectors
 
-    @property
-    def clusters(self):
-        return self._clusters
-
-    @clusters.setter
-    def clusters(self, clusters):
-        if isinstance(clusters, list):
-            self._clusters = clusters
+    def calc_committor(self, source, target, forward=None):
+        """Calculate forward or backward committor for each node between source and target."""
+        self.source = source
+        self.target = target
+        self._forward_committor = mana.committor(self.transition_matrix, self.source, self.target, forward=forward)
+        return self._forward_committor
 
     @property
-    def cluster_memberships(self):
-        return nx.get_node_attributes(self, name="memberships")
+    def forward_committor(self):
+        """Return or calc. and then return forward committor for each node between source and target"""
+        if isinstance(self._forward_committor, np.ndarray):
+            return self._forward_committor
+
+        elif isinstance(self.source, list) and isinstance(self.target, list):
+            self.calc_committor(self.source, self.target, forward=True)
+
+        else:
+            raise Exception('No forward committor calculated, source and target not defined.')
 
     @property
-    def cluster_assigments(self):
-        return nx.get_node_attributes(self, name="cluster")
+    def backward_committor(self):
+        """Return or calc. and then return backward committor for each node between source and target"""
+        if isinstance(self._backward_committor, np.ndarray):
+            return self._backward_committor
+
+        elif isinstance(self.source, list) and isinstance(self.target, list):
+            self.calc_committor(self.source, self.target, forward=False)
+
+        else:
+            raise Exception('No forward committor calculated, source and target not defined.')
 
     @property
     def source(self):
@@ -332,9 +345,6 @@ class EvoMSM(GenotypePhenotypeGraph):
         else:
             raise Exception("Target has to be a list of at least one genotype(type=str) or node(type=int)")
 
-    @property
-    def total_flux(self):
-        return self._total_flux
 
     # def peaks_(self):
     #     """

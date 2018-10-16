@@ -23,4 +23,31 @@ def linear_skew(phenotypes, selection_gradient):
 
 def one_to_one(phenotypes):
     """One-to-one mapping of phenotypes to fitnesses."""
-    return phenotypes
+    fitnesses = phenotypes.copy()
+    return fitnesses
+
+
+def step_function(phenotypes, interval, function='floor'):
+    """Define intervals and assign same fitness to all phenotypes within the same itnerval.
+    Example: phenotypes = [0.38, 0.32, 0.41], interval = 0.1, function = 'floor' --> fitnesses = [0.3, 0.3, 0.4]
+
+    Parameters
+    ----------
+    phenotypes : list/1D numpy.ndarray.
+        Phenotype values (dtype=float).
+
+    interval : float.
+        Interval within which phenotypes get the same fitness.
+
+    function : str, 'floor' or 'ceil' (default='floor').
+        Function to define if lower value ('floor') or upper value ('ceil') of the specific interval is used as fitness.
+        Example (interval = 0.1):
+        [0.48, 0.42, 0.32] --'floor'--> [0.4, 0.4, 0.3]
+        [0.48, 0.42, 0.32] --'ceil'--> [0.5, 0.5, 0.4]
+
+    Returns
+    -------
+    fitnesses : list/1D numpy.ndarray.
+        Fitness values (dtype=float).
+    """
+    pass

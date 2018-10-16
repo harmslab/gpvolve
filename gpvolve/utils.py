@@ -1,6 +1,6 @@
 from scipy.sparse.csgraph import shortest_path
 import networkx as nx
-from scipy.sparse import dok_matrix, csr_matrix
+from scipy.sparse import csr_matrix
 import numpy as np
 import itertools
 
@@ -31,7 +31,7 @@ def sort_clusters_by_nodes(clusters, nodes):
     return new_order
 
 
-def cluster_dist(clst1, clst2):
+def cluster_dist(clst1, clst2, reorder=False):
     """Calculate pairwise distance between two lists of clusters, i.e. two independent clustering results.
 
     Parameters
@@ -70,26 +70,28 @@ def cluster_dist(clst1, clst2):
             d_matrix[idx1, idx2
             ] = dist
 
-    # Reorder the clusters of clst2 based on their similarity with clst1.
-    clst2_ord = clst2.copy()
-    # For each cluster in clst1, find the cluster in clst2 witht the smalles distance.
-    order = np.argmin(d_matrix, axis=1)
-    # Apply that order to copy of clst2.
-    # (There's probably a faster one-liner but I can't find a way that works for two sets with diff. number of clusters)
-    for i, o in enumerate(order):
-        # Remove item with index o from clst2_ord
-        clst2_ord.pop(o)
-        # Insert item with index o from clst2.
-        clst2_ord.insert(i, clst2[o])
+    if reorder:
+        # Reorder the clusters of clst2 based on their similarity with clst1.
+        clst2_ord = clst2.copy()
+        # For each cluster in clst1, find the cluster in clst2 witht the smalles distance.
+        order = np.argmin(d_matrix, axis=1)
+        # Apply that order to copy of clst2.
+        # (There's probably a faster one-liner but I can't find a way that works for sets with diff. number of clusters)
+        for i, o in enumerate(order):
+            # Remove item with index o from clst2_ord
+            clst2_ord.pop(o)
+            # Insert item with index o from clst2.
+            clst2_ord.insert(i, clst2[o])
 
-    return d_matrix, [clst1, clst2_ord]
+        return d_matrix, [clst1, clst2_ord]
+
+    return d_matrix
 
 
 def crispness(T, clusters):
     """Calculate the crispness of clustering."""
     # Get block diagonal matrix
     block_diag_order = list(itertools.chain(*clusters))
-    print(block_diag_order)
     S = T[:, block_diag_order][block_diag_order]
 
     trace = 0
@@ -241,6 +243,41 @@ def paths_prob_to_edges_flux(paths_prob):
 
     return edge_flux
 
+#
+# def paths_prob_to_edges_flux(paths_prob):
+#     """Chops a list of paths into its edges, and calculate the probability
+#     of that edge across all paths.
+#
+#     Parameters
+#     ----------
+#     paths: list of tuples
+#         list of the paths.
+#
+#     Returns
+#     -------
+#     edge_flux: dictionary
+#         Edge tuples as keys, and probabilities as values.
+#     """
+#     edge_flux = {}
+#     for path, prob in paths_prob.items():
+#
+#         for i in range(len(path)-1):
+#             # Get edge
+#             edge = (path[i], path[i+1])
+#
+#             # Get path probability to edge.
+#             if edge in edge_flux:
+#                 edge_flux[edge] += prob
+#
+#             # Else start at zero
+#             else:
+#                 edge_flux[edge] = prob
+#
+#     return edge_flux
+
+
+
+
 
 def path_prob(path, T):
     prob = 1
@@ -273,6 +310,7 @@ def monotonic_incr(sequence, values):
 
 
 def combinations(source, target):
+    """All combinations between two lists source and target."""
     c = []
     for s in source:
         for t in target:
