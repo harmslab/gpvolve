@@ -270,7 +270,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
     @property
     def eigenvectors(self):
         """Get the eigenvalues of the transition matrix"""
-        if self._eigenvectors.any():
+        if isinstance(self._eigenvectors, np.ndarray):
             return self._eigenvectors
         else:
             self._eigenvectors = mana.eigenvectors(self.transition_matrix)
@@ -280,70 +280,95 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
     def eigenvectors(self, eigenvectors):
         self._eigenvectors = eigenvectors
 
-    def calc_committor(self, source, target, forward=None):
-        """Calculate forward or backward committor for each node between source and target."""
-        self.source = source
-        self.target = target
-        self._forward_committor = mana.committor(self.transition_matrix, self.source, self.target, forward=forward)
-        return self._forward_committor
+    def forward_committor(self, source=None, target=None):
+        """If no new source and target provided, return existing forward committor values, else, calculate them."""
+        if not source and not target:
+            if isinstance(self._forward_committor, np.ndarray):
+                return self._forward_committor
 
-    @property
-    def forward_committor(self):
-        """Return or calc. and then return forward committor for each node between source and target"""
-        if isinstance(self._forward_committor, np.ndarray):
+            else:
+                raise Exception('No forward committor calculated and no source and target provided.')
+
+        elif source and target:
+            self._forward_committor = self.calc_committor(self.transition_matrix, source, target,
+                                                          forward=True)
             return self._forward_committor
 
-        elif isinstance(self.source, list) and isinstance(self.target, list):
-            self.calc_committor(self.source, self.target, forward=True)
+    def backward_committor(self, source=None, target=None):
+        """If no new source and target provided, return existing backward committor values, else, calculate them."""
+        if not source and not target:
+            if isinstance(self._backward_committor, np.ndarray):
+                return self._backward_committor
 
-        else:
-            raise Exception('No forward committor calculated, source and target not defined.')
+            else:
+                raise Exception('No forward committor calculated and no source and target provided.')
 
-    @property
-    def backward_committor(self):
-        """Return or calc. and then return backward committor for each node between source and target"""
-        if isinstance(self._backward_committor, np.ndarray):
+        elif isinstance(source, list) and isinstance(target, list):
+            self._backward_committor = self.calc_committor(self.transition_matrix, source, target,
+                                                           forward=False)
             return self._backward_committor
 
-        elif isinstance(self.source, list) and isinstance(self.target, list):
-            self.calc_committor(self.source, self.target, forward=False)
+    @staticmethod
+    def calc_committor(T, source, target, forward=None):
+        """Calculate forward or backward committor for each node between source and target.
 
-        else:
-            raise Exception('No forward committor calculated, source and target not defined.')
+        Parameters
+        ----------
+        T : 2D numpy.ndarray.
+            Row stochastic transition matrix.
 
-    @property
-    def source(self):
-        """Get source node"""
-        return self._source
+        source : list.
+            Source of probability flux. Committor value i will be the probability of leaving source and reaching node i
+            before reaching target or source again.
 
-    @source.setter
-    def source(self, source):
-        """Set source node/genotype to list of nodes(type=int) or genotypes(type=str)"""
-        if isinstance(source, list):
-            if not isinstance(source[0], int):
-                df = self.gpm.data
-                self._source = [df[df['genotypes'] == s].index.tolist()[0] for s in source]
-            elif isinstance(source[0], int):
-                self._source = source
-        else:
-            raise Exception("Source has to be a list of at least one genotype(type=str) or node(type=int)")
+        target : list.
+            Sink of probability flux. Committor value i will be the probability of reaching target from node i before
+            reaching source.
 
-    @property
-    def target(self):
-        """Get target node"""
-        return self._target
+        forward : bool.
+            If True, forward committor is calculated. If False, backward committor is calculated.
 
-    @target.setter
-    def target(self, target):
-        """Set target node/genotype to list of nodes(type=int) or genotypes(type=str)"""
-        if isinstance(target, list):
-            if not isinstance(target[0], int):
-                df = self.gpm.data
-                self._target = [df[df['genotypes'] == t].index.tolist()[0] for t in target]
-            elif isinstance(target[0], int):
-                self._target = target
-        else:
-            raise Exception("Target has to be a list of at least one genotype(type=str) or node(type=int)")
+        Returns
+        -------
+        committor : 1D numpy.ndarray.
+            Committor values in order of transition matrix.
+        """
+        committor = mana.committor(T, source, target, forward=forward)
+        return committor
+
+    # @property
+    # def source(self):
+    #     """Get source node"""
+    #     return self._source
+    #
+    # @source.setter
+    # def source(self, source):
+    #     """Set source node/genotype to list of nodes(type=int) or genotypes(type=str)"""
+    #     if isinstance(source, list):
+    #         if not isinstance(source[0], int):
+    #             df = self.gpm.data
+    #             self._source = [df[df['genotypes'] == s].index.tolist()[0] for s in source]
+    #         elif isinstance(source[0], int):
+    #             self._source = source
+    #     else:
+    #         raise Exception("Source has to be a list of at least one genotype(type=str) or node(type=int)")
+    #
+    # @property
+    # def target(self):
+    #     """Get target node"""
+    #     return self._target
+    #
+    # @target.setter
+    # def target(self, target):
+    #     """Set target node/genotype to list of nodes(type=int) or genotypes(type=str)"""
+    #     if isinstance(target, list):
+    #         if not isinstance(target[0], int):
+    #             df = self.gpm.data
+    #             self._target = [df[df['genotypes'] == t].index.tolist()[0] for t in target]
+    #         elif isinstance(target[0], int):
+    #             self._target = target
+    #     else:
+    #         raise Exception("Target has to be a list of at least one genotype(type=str) or node(type=int)")
 
 
     # def peaks_(self):
