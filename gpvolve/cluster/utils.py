@@ -11,7 +11,6 @@ def split_clusters(clusters, new):
     """
     pass
 
-
 def coarse_grain_transition_matrix(T, clusters):
     """Coarse-grain a transition matrix based on clusters.
 
@@ -31,10 +30,13 @@ def coarse_grain_transition_matrix(T, clusters):
         probabilities between all nodes in the ith cluster and all nodes in the jth cluster and normalize by the number
         of nodes in the ith cluster -> Average probability of jumping form cluster i to cluster j. 'cluster_matrix' has
         to be row stochastic.
+
+    sorted_T : 2D numpy.ndarray.
+        The sorted version of the full transition matrix (sorted according to clusters).
     """
     # Sort T so that rows and columns belonging to the same cluster are next to each other.
     node_order = list(itertools.chain(*clusters))
-    S = T[:, node_order][node_order]
+    sorted_T = T[:, node_order][node_order]
 
     # Get lengths of all clusters
     lengths = [len(cl) for cl in clusters]
@@ -53,9 +55,9 @@ def coarse_grain_transition_matrix(T, clusters):
         for j, col in enumerate(slices):
             # Sum all transition probabilities of all nodes in cluster i to all nodes in cluster j
             # and divide by number of nodes in cluster i -> Average probability of moving from cluster i to cluster j.
-            cluster_matrix[i, j] = np.sum(S[row[0]:row[1], col[0]:col[1]]) / lengths[i]
+            cluster_matrix[i, j] = np.sum(sorted_T[row[0]:row[1], col[0]:col[1]]) / lengths[i]
 
-    return cluster_matrix
+    return cluster_matrix, sorted_T
 
 
 def clusters_to_assignments(clusters):
@@ -179,6 +181,7 @@ def cluster_dist(clst1, clst2, reorder=False):
     return d_matrix
 
 
+### Actually metastability not crispness? Crispness defined as how 'crisp' the membership matrix is not T?
 def crispness(T, clusters):
     """Calculate the crispness of clustering."""
     # Reorder T, so that rows and columns belonging to the same cluster are next to each other.

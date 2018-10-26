@@ -190,6 +190,18 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
 
         return peaks
 
+
+    def step_function(self):
+        """A function that bins phenotypes and allows one to define neutral networks in g-p-maps with continuous
+        phenotypes
+        """
+        pass
+
+    def neutral_network(self):
+        """Find neutral network. Look for connected components among phenotypes with same value or value within the same
+        pre-defines bin."""
+        pass
+
     @property
     def transition_matrix(self):
         """Transition matrix of the """

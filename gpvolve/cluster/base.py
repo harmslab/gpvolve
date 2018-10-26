@@ -1,7 +1,10 @@
 from .utils import *
+from ..utils import find_max
+
 import msmtools.analysis as mana
 import warnings
 import networkx as nx
+from scipy.sparse import dok_matrix
 
 
 class GenotypePhenotypeClusters(object):
@@ -12,12 +15,37 @@ class GenotypePhenotypeClusters(object):
         self._clusters = clusters
         self._assignments = None
         self._memberships = None
+        self.cluster_reps = None
 
         # Build clustered tm
-        self._transition_matrix = coarse_grain_transition_matrix(gpmsm.transition_matrix, clusters)
+        self._transition_matrix, self._full_transition_matrix = coarse_grain_transition_matrix(gpmsm.transition_matrix,
+                                                                                               clusters)
 
-        # Build networkx DiGraph for clusters from transition matrix.
-        self.G = nx.from_numpy_array(self.transition_matrix, nx.DiGraph)
+        # Build networkx DiGraph for clusters from transition matrix and set edge attribute.
+        self.network = nx.DiGraph()
+        self.network.add_edges_from(dok_matrix(self.transition_matrix).keys())
+        nx.set_edge_attributes(self.network, name='transition_probability', values=dok_matrix(self.transition_matrix))
+        nx.set_node_attributes(self.network, name='size', values={i: len(cluster) for i, cluster in enumerate(self.clusters)})
+
+        # Get cluster representatives.
+        self.cluster_rep()
+
+    def cluster_rep(self, nodes=None):
+        """Transfer attributes of one representative node per cluster to the node of the cluster that it represents.
+
+        nodes : list (default=None).
+            The ith node of 'nodes' will be the representative of the ith cluster. If None, node with highest fitness in
+            each cluster will be used as its representative.
+        """
+        if nodes:
+            self.cluster_reps = nodes
+        else:
+            # Node with highest fitness becomes representative.
+            self.cluster_reps = [find_max(self.gpmsm, cluster) for cluster in self.clusters]
+
+        # Get all attributes of the representative nodes
+        values = {i: self.gpmsm.node[node] for i, node in enumerate(self.cluster_reps)}
+        nx.set_node_attributes(self.network, values)
 
     @property
     def clusters(self):
@@ -66,6 +94,13 @@ class GenotypePhenotypeClusters(object):
 
         else:
             warnings.warn("Not a transition matrix. Has to be square and rows must sum to one.")
+
+    @property
+    def full_transition_matrix(self):
+        if isinstance(self._full_transition_matrix, np.ndarray):
+            return self._full_transition_matrix
+        else:
+            raise Exception("No full transition matrix found.")
 
     @classmethod
     def from_memberships(cls, gpmsm, memberships):

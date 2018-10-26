@@ -2,6 +2,9 @@ from .utils import *
 import matplotlib.pyplot as plt
 from gpgraph.draw import *
 from scipy import sparse
+import numpy as np
+from numpy import inf
+import matplotlib as mpl
 
 
 def plot_timescales(timescales, figsize=None, n=None, color='orange'):
@@ -16,6 +19,81 @@ def plot_eigenvalues(eigenvalues, figsize=None, n=None, color='orange'):
     fig, ax = plt.subplots(figsize=figsize)
     ax.bar([i for i in range(0, len(eigenvalues[:n]))], eigenvalues[:n], color=color)
     ax.set_title("Eigenvalues")
+    return fig, ax
+
+
+def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12, 10)):
+    """Plot the entries of a matrix
+
+    Parameters
+    ----------
+    matrix : 2D numpy.ndarray.
+        A matrix with numerical entries.
+
+    log : bool (default=True).
+        log10 transform data to visualize low-valued matrix entries (recommended for transition matrices).
+
+    remove_diag : bool (default=False).
+        Remove diagonal if True. Helps with visualizing matrix where diagonal is very dominant.
+
+    colorbar : bool (default=True)
+        If True plot colorbar mapping values to color.
+
+    figsize : tuple of int (default=(12,10).
+        Size of matplotlib figure.
+
+    Returns
+    -------
+    fig : matplotlib figure.
+        matplotlib figure of size 'figsize'.
+
+    ax : matplotlib axis.
+        matplotlib axis that contains the matrix visualization.
+
+    """
+    T = matrix.copy()
+
+    if remove_diag:
+        np.fill_diagonal(T, val=0)
+
+    if log:
+        T = np.log10(T)
+        # Values that are too small will become -inf, we set them to the min. value of T
+        T[T == -inf] = 1
+        minv = np.min(T)
+        T[T == 1] = minv
+
+    # Normalize colors to min and max of T.
+    norm = mpl.colors.Normalize(vmin=np.min(T), vmax=np.max(T))
+
+    cmap = mpl.cm.get_cmap("Greys")
+
+    # Get a color for each value.
+    logcolors = [cmap(norm(val)) for val in list(T.flatten())]
+
+    # Get coordinates.
+    x, y = np.indices(T.shape)
+
+    # Plot
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if colorbar:
+        # Get color map
+        cm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        cm.set_array([])
+
+        fig.colorbar(cm)
+
+    ax.set_xlim(-1, T.shape[0])
+    ax.set_ylim(-1, T.shape[1])
+    ax.invert_yaxis()
+
+    # Get number of pixels per axis unit and calculate scatter marker size that fills exactly one axis unit.
+    x_pix, y_pix = ax.transData.transform([1, 1]) - ax.transData.transform((0, 0))
+    s = x_pix ** 2  # Diameter of a marker in pixels is equal to the square root of markersize s.
+
+    ax.scatter(x, y, c=logcolors, cmap='Greys', s=s, marker='s')
+
     return fig, ax
 
 
@@ -159,7 +237,7 @@ def plot_network(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure(figsize=figsize)
+        fig = ax.get_figure()
 
     # Flattened position.
     pos = flattened(network, vertical=True)
@@ -258,6 +336,7 @@ def plot_network(
         fig.colorbar(cm)
 
     return fig, ax
+
 
 def plot_clusters(
     network,

@@ -1,4 +1,4 @@
-from msmtools.flux import tpt as TPT
+from msmtools.flux import tpt
 
 def paths_prob_to_edges_flux(paths_prob):
     """Chops a list of paths into its edges, and calculate the probability
@@ -36,7 +36,7 @@ def paths_prob_to_edges_flux(paths_prob):
     return edge_flux
 
 
-class tpt(object):
+class TransitionPathTheory(object):
     """Class for calculating reactive flux of a markov state model.
 
     Parameters
@@ -79,7 +79,7 @@ class tpt(object):
         self.source = source
         self.target = target
 
-        self.ReactiveFlux = TPT(self.msm.transition_matrix, self.source, self.target)
+        self.ReactiveFlux = tpt(self.msm.transition_matrix, self.source, self.target)
         self.net_flux = self.ReactiveFlux.net_flux
         self.total_flux = self.ReactiveFlux.total_flux
         self.forward_committor = self.ReactiveFlux.forward_committor
