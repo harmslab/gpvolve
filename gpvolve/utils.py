@@ -5,6 +5,200 @@ import numpy as np
 import itertools
 
 
+def get_sub_paths(paths, start, end):
+    """Get part of path between 'start' node and 'end' node.
+    Parameters
+    ----------
+    paths : dict.
+        dict of paths and probabiltiites. Paths have to tuples of integers.
+
+    start : any single list element.
+        Element with which sub-path should start.
+
+    end : any single list element.
+        Element with which sub-path should start.
+
+    Returns
+    -------
+    subpaths : dict.
+        Dict of subpaths. Some subpaths might be identical, which will be treated as one and the probabilities summed.
+
+        """
+    subpaths = {}
+    for path, prob in paths.items():
+        p = list(path)
+        try:
+            s = p.index(start)
+        except ValueError:
+            raise Exception("%s not in path %s" % (s, path))
+        try:
+            e = p.index(end)
+        except ValueError:
+            raise Exception("%s not in path %s" % (e, path))
+
+        try:
+            subpaths[tuple(p[s:e + 1])] += prob
+        except KeyError:
+            subpaths[tuple(p[s:e + 1])] = prob
+
+
+    return subpaths
+
+
+def paths_that_contain(paths, nodes, bool_and=False):
+    """Return paths that contain at least one or all of the nodes.
+
+    Parameters
+    ----------
+    paths : list.
+        list of paths where each path is a tuple of integers. Example : [(1,2,3), (1,3,4)]
+
+    nodes : list.
+        List of nodes that the paths are going to be searched for.
+
+    bool_and : bool.
+        If True, the sufficient requirement is that all nodes are in a path. If False, the sufficient
+        requirement is that at least one of the nodes is in a path.
+
+    Returns
+    -------
+    paths_ : list.
+        list of paths that contain at least one or all of the nodes in 'nodes'.
+    """
+    paths_ = []
+
+    # Must contain all nodes.
+    if bool_and:
+        for path in paths:
+            contains = True
+            for node in nodes:
+                if node in path:
+                    continue
+                else:
+                    contains = False
+                    break
+            # If no breaks, all nodes are in path. (Sufficient requirement.)
+            if contains:
+                paths_.append(path)
+
+    # Must contain at least one of the nodes.
+    elif not bool_and:
+        for path in paths:
+            for node in nodes:
+                if node in path:
+                    paths_.append(path)
+                    break
+    return paths_
+
+
+def paths_that_do_not_contain(paths, nodes, bool_and=True):
+    """Return paths that do not contain at least one or all of the nodes.
+
+    Parameters
+    ----------
+    paths : list.
+        list of paths where each path is a tuple of integers. Example : [(1,2,3), (1,3,4)]
+
+    nodes : list.
+        List of nodes that the paths are going to be searched for.
+
+    bool_and : bool.
+        If True, the sufficient requirement is that all nodes are not in a path. If False, the sufficient
+        requirement is that at least one of the nodes is not in a path.
+
+    Returns
+    -------
+    paths_ : list.
+        list of paths that do not contain at least one or all of the nodes in 'nodes'.
+    """
+    paths_ = []
+
+    # Must not contain all nodes.
+    if bool_and:
+        for path in paths:
+            contains = True
+            for node in nodes:
+                if node not in path:
+                    continue
+                else:
+                    contains = False
+                    break
+            # If no breaks, all nodes are not in path. (Sufficient requirement.)
+            if contains:
+                paths_.append(path)
+
+    # Must not contain at least one of the nodes.
+    elif not bool_and:
+        for path in paths:
+            for node in nodes:
+                if node not in path:
+                    paths_.append(path)
+                    break
+    return paths_
+
+
+def fraction_of_paths(paths_dict, fraction=1.):
+    """Get fraction of strongest paths whose probability sum to a certain fraction.
+
+    Parameters
+    ----------
+    paths_dict : dict.
+        Dictionary of paths (tuple) and probabilities (float). Should be normalized, otherwise fraction might not
+        actually get the fraction.
+
+    fraction : float/int (default=1.).
+        Find most likely paths which have a summed probability of at least 'fraction'.
+
+    Returns
+    -------
+    new_dict : dict.
+        Dictionary of most likely paths which have a summed probability of at least 'fraction'.
+    """
+    # Sort paths and probababilties from highest to lowest probability.
+    sorted_probs, sorted_paths = zip(*sorted(zip(paths_dict.values(), paths_dict.keys()), reverse=True))
+    probsum = 0
+
+    for i, prob in enumerate(sorted_probs):
+        probsum += prob
+
+        # Enough paths to reach fraction?
+        if probsum >= fraction:
+            new_dict = dict(zip(sorted_paths[:i+1], sorted_probs[:i+1]))
+            return new_dict
+    # Not enough paths in whole dictionary to reach fraction.
+    new_dict = paths_dict
+    return new_dict
+
+
+def paths_and_probs_to_dict(paths, probs, normalize=False):
+    """Turn paths and path probabilities as returned from Transition Path Theory into dictionary.
+
+    Parameters
+    ----------
+    paths : 1D numpy.ndarray.
+        Array of paths where each path is a numpy array of integer on its own.
+
+    probs : 1D numpy.ndarray.
+        Array of path probabailities.
+
+    Returns
+    -------
+    paths_dict : dict.
+        Dictionary of paths (tuples) and probabilities (float)
+    """
+    pathlist = list(tuple(path) for path in paths)
+
+    if normalize:
+        psum = sum(probs)
+        pathproblist = [prob/psum for prob in probs]
+    else:
+        pathproblist = list(probs)
+
+    paths_dict = dict(zip(pathlist, pathproblist))
+
+    return paths_dict
+
+
 def find_max(gpmsm, nodes=None, attribute='fitness'):
     """Return node with highest fitness from subset of nodes
 
@@ -149,41 +343,6 @@ def paths_prob_to_edges_flux(paths_prob):
                 edge_flux[edge] = prob
 
     return edge_flux
-
-#
-# def paths_prob_to_edges_flux(paths_prob):
-#     """Chops a list of paths into its edges, and calculate the probability
-#     of that edge across all paths.
-#
-#     Parameters
-#     ----------
-#     paths: list of tuples
-#         list of the paths.
-#
-#     Returns
-#     -------
-#     edge_flux: dictionary
-#         Edge tuples as keys, and probabilities as values.
-#     """
-#     edge_flux = {}
-#     for path, prob in paths_prob.items():
-#
-#         for i in range(len(path)-1):
-#             # Get edge
-#             edge = (path[i], path[i+1])
-#
-#             # Get path probability to edge.
-#             if edge in edge_flux:
-#                 edge_flux[edge] += prob
-#
-#             # Else start at zero
-#             else:
-#                 edge_flux[edge] = prob
-#
-#     return edge_flux
-
-
-
 
 
 def path_prob(path, T):
@@ -356,3 +515,44 @@ def max_prob_matrix(T, source=None, target=None):
     data = np.ones(T.shape[0])
     M = csr_matrix((data, indices, indptr), shape=T.shape).toarray()
     return M
+
+
+def paths_prob_to_edges_flux(paths_prob):
+    """Chops a list of paths into its edges, and calculate the probability
+    of that edge across all paths.
+
+    Parameters
+    ----------
+    paths: list of tuples
+        list of the paths.
+
+    Returns
+    -------
+    edge_flux: dictionary
+        Edge tuples as keys, and probabilities as values.
+    """
+    edge_flux = {}
+    for path, prob in paths_prob.items():
+
+        for i in range(len(path)-1):
+            # Get edge
+            edge = (path[i], path[i+1])
+
+            # Get path probability to edge.
+            if edge in edge_flux:
+                edge_flux[edge] += prob
+
+            # Else start at zero
+            else:
+                edge_flux[edge] = prob
+
+    return edge_flux
+
+
+def edges_flux_to_node_flux(G, attribute_name='flux'):
+    """Sum all flux from incoming edges for each node in networkx object"""
+    node_fluxes = {}
+    for node in G.nodes:
+        node_flux = sum([edge[2] for edge in list(G.in_edges(node, data=attribute_name)) if edge[2]])
+        node_fluxes[node] = node_flux
+    return node_fluxes

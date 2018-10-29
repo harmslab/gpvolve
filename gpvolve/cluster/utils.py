@@ -181,9 +181,10 @@ def cluster_dist(clst1, clst2, reorder=False):
     return d_matrix
 
 
-### Actually metastability not crispness? Crispness defined as how 'crisp' the membership matrix is not T?
-def crispness(T, clusters):
-    """Calculate the crispness of clustering."""
+def metastability(transition_matrix, clusters):
+    """Calculate the metastability of a transition matrix."""
+    T = transition_matrix.copy()
+
     # Reorder T, so that rows and columns belonging to the same cluster are next to each other.
     cluster_diag_order = list(itertools.chain(*clusters))
     S = T[:, cluster_diag_order][cluster_diag_order]
@@ -198,6 +199,25 @@ def crispness(T, clusters):
 
         start = end
 
+    metastabi = trace / len(clusters)
+    return metastabi
+
+
+def crispness(membership_matrix, clusters):
+    """Calculate the crispness of clustering."""
+    # Reorder M, so that rows belonging to the same cluster are next to each other.
+    M = membership_matrix.copy()
+    cluster_order = list(itertools.chain(*clusters))
+    S = M[cluster_order,:]
+    trace = 0
+    start = 0
+    for i, cluster in enumerate(clusters):
+        end = start + len(cluster)
+        # The probability of transitioning within a cluster normalized by the total probability of
+        # leaving or staying in a certain cluster, which is equal to the length of that cluster, since rows sum to 1.
+        trace += np.sum(S[start:end, i]) / len(cluster)
+
+        start = end
+
     crisp = trace / len(clusters)
     return crisp
-

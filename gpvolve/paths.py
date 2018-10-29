@@ -148,6 +148,14 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
         interval. Inner dictionary is dictionary of paths (keys, dtype=tuple) and their count or probability.
 
     """
+
+    ### DEFINITELY NEEDS A MORE SOPHISTICATED WAY OF CHECKING CONVERGENCE. IF EUCL. DIST. IS USED, AT LEAST ACCOUNT
+    ### FOR THE NUMBER OF ITERATIONS/ ACCOUNT FOR THE EFFECT THAT ONE SAMPLE CAN MAKE TO THE ALREADY EXISTING NUMBER OF
+    ### SAMPLES
+
+    if not isinstance(source, int):
+        raise Exception("source must be single node")
+
     T = Tm.copy()
 
     if not max_iter:
@@ -176,12 +184,10 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
 
         while path[-1] not in target:
             state = path[-1]
-
             # Indices of states with nonzero transition probability.
             nonzero_ind = np.nonzero(T[state])[0]
             # Probability mass function for states with nonzero transition probability.
             probs = T[state][np.nonzero(T[state])]
-
             # As long as the state has not changed, continue to randomly pick new state from the prob. distribution.
             while state == path[-1]:
                 # Choose next state from probability mass function of states with nonzero transition probability.
@@ -194,6 +200,7 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
             paths[tuple(path)] += 1
         except KeyError:
             paths[tuple(path)] = 1
+
 
         if counter % interval == 0:
             if out == 'count':
@@ -209,7 +216,7 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
                 if conv_metric < conv_crit:
                     if not mute:
                         print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
-                    return paths_at_intervals[counter]
+                    return paths_at_intervals[counter], paths_at_intervals
 
     print("Did not converge after %s iterations. Last eucl. distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
     return paths_at_intervals[counter], paths_at_intervals

@@ -5,7 +5,7 @@ import msmtools.analysis as mana
 import warnings
 import networkx as nx
 from scipy.sparse import dok_matrix
-
+import itertools
 
 class GenotypePhenotypeClusters(object):
     def __init__(self, gpmsm, clusters):
@@ -16,7 +16,7 @@ class GenotypePhenotypeClusters(object):
         self._assignments = None
         self._memberships = None
         self.cluster_reps = None
-
+        self._order = None
         # Build clustered tm
         self._transition_matrix, self._full_transition_matrix = coarse_grain_transition_matrix(gpmsm.transition_matrix,
                                                                                                clusters)
@@ -97,10 +97,20 @@ class GenotypePhenotypeClusters(object):
 
     @property
     def full_transition_matrix(self):
+        """Transition matrix sorted according to the order of states in the cluster sets."""
         if isinstance(self._full_transition_matrix, np.ndarray):
             return self._full_transition_matrix
         else:
             raise Exception("No full transition matrix found.")
+
+    @property
+    def order(self):
+        """Return the state ordering of the clustered sets and the full_transition_matrix."""
+        if isinstance(self._order, np.ndarray):
+            return self._order
+        else:
+            self._order = np.fromiter(itertools.chain(*self.clusters), int)
+        return self._order
 
     @classmethod
     def from_memberships(cls, gpmsm, memberships):

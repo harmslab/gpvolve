@@ -22,7 +22,7 @@ def plot_eigenvalues(eigenvalues, figsize=None, n=None, color='orange'):
     return fig, ax
 
 
-def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12, 10)):
+def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12, 10), ax=None, scale_x=True):
     """Plot the entries of a matrix
 
     Parameters
@@ -41,6 +41,10 @@ def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12,
 
     figsize : tuple of int (default=(12,10).
         Size of matplotlib figure.
+
+    scale_x : bool (default=True)
+        If True, markers will be scaled to fill one xaxis unit, if False markers will be scaled to fill one yaxis unit.
+        Both at the same time is not possible.
 
     Returns
     -------
@@ -69,13 +73,17 @@ def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12,
     cmap = mpl.cm.get_cmap("Greys")
 
     # Get a color for each value.
-    logcolors = [cmap(norm(val)) for val in list(T.flatten())]
+    colors = [cmap(norm(val)) for val in list(T.flatten())]
 
     # Get coordinates.
-    x, y = np.indices(T.shape)
+    indices = np.indices(T.shape)
+    x = indices[1].flatten()
+    y = indices[0].flatten()
 
-    # Plot
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
 
     if colorbar:
         # Get color map
@@ -84,15 +92,19 @@ def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12,
 
         fig.colorbar(cm)
 
-    ax.set_xlim(-1, T.shape[0])
-    ax.set_ylim(-1, T.shape[1])
+    ax.set_xlim(-1, T.shape[1])
+    ax.set_ylim(-1, T.shape[0])
     ax.invert_yaxis()
 
     # Get number of pixels per axis unit and calculate scatter marker size that fills exactly one axis unit.
     x_pix, y_pix = ax.transData.transform([1, 1]) - ax.transData.transform((0, 0))
-    s = x_pix ** 2  # Diameter of a marker in pixels is equal to the square root of markersize s.
+    if scale_x:
+        s = x_pix ** 2  # Diameter of a marker in pixels is equal to the square root of markersize s.
 
-    ax.scatter(x, y, c=logcolors, cmap='Greys', s=s, marker='s')
+    else:
+        s = y_pix ** 2
+
+    ax.scatter(x, y, c=colors, cmap='Greys', s=s, marker='s')
 
     return fig, ax
 

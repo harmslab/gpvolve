@@ -1,4 +1,6 @@
 from msmtools.flux import tpt
+import networkx as nx
+from scipy.sparse import dok_matrix
 
 def paths_prob_to_edges_flux(paths_prob):
     """Chops a list of paths into its edges, and calculate the probability

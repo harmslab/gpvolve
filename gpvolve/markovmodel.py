@@ -102,20 +102,20 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         mutation_prob = np.array([1/len(list(self.neighbors(node))) for node in nodepairs[0]])
         # mutation_prob = np.array(1 / nx.adjacency_matrix(self).sum(axis=0))[0]  # number of neighbors, exclude
 
-        # Compute fixation probabilities and get edge keys.
+        # Compute transition probability and get edge keys.
         probs = mutation_prob * fixation_model(fitness1, fitness2, **params)
 
-        # Set fixation probability for all edges. Values for the self-looping edges are incorrect at this point.
+        # Set transition_probability for all edges. Values for the self-looping edges are incorrect at this point.
         edges = self.edges.keys()
-        nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(edges, probs)))
+        nx.set_edge_attributes(self, name="transition_probability", values=dict(zip(edges, probs)))
 
         # Calculate transition matrix diagonal, i.e. self-looping probability.
-        self.transition_matrix = add_self_probability(nx.attr_matrix(self, edge_attr="fixation_probability")[0])
+        self.transition_matrix = add_self_probability(nx.attr_matrix(self, edge_attr="transition_probability")[0])
 
         # Update edge attributes of self-looping edges with transition matrix diagonal values.
         diag_indices = np.diag_indices(self.transition_matrix.shape[0])
         diag_vals = self.transition_matrix[diag_indices]
-        nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(self.self_edges, diag_vals)))
+        nx.set_edge_attributes(self, name="transition_probability", values=dict(zip(self.self_edges, diag_vals)))
 
 
     def peaks(self):
@@ -209,7 +209,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
             return self._transition_matrix
         else:
             try:
-                self._transition_matrix = np.array(nx.attr_matrix(self, edge_attr="fixation_probability", normalized=False)[0])
+                self._transition_matrix = np.array(nx.attr_matrix(self, edge_attr="transition_probability", normalized=False)[0])
             except KeyError:
                 print("Transition matrix doesn't exit yet. Add fixation probabilities first.")
 

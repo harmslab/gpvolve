@@ -72,7 +72,8 @@ def moran(fitness1, fitness2, population_size):
     """
     # Check for pairs of identical fitnesses.
     err_idx = np.where(fitness1 - fitness2 == 0)
-    # If identical fitnesses found, add a 1.000.000 ths of the second fitness value to itself to marginally unlevel the two.
+
+    # If identical fitnesses found, add a 1.000.000ths of the second fitness value to itself to marginally unlevel the two.
     for index in err_idx:
         copy = fitness2[index]
         fitness2[index] = copy + copy / 10 ** 6
