@@ -2,44 +2,112 @@ from .utils import *
 import matplotlib.pyplot as plt
 from gpgraph.draw import *
 from scipy import sparse
+import numpy as np
+from numpy import inf
+import matplotlib as mpl
 
-def plot_membership(memberships):
-    # bar/scatt plot. Each genotype plotted at x=their assigned cluster(largest membership) and y=that membership prob.)
-    pass
-
-def phenotype_fitness(phenotypes, fitnesses):
-    pass
 
 def plot_timescales(timescales, figsize=None, n=None, color='orange'):
+    """Simple bar plot of a sequence of values"""
     fig, ax = plt.subplots(figsize=figsize)
     ax.bar([i for i in range(0, len(timescales[:n]))], timescales[:n], color=color)
     ax.set_title("Timescales")
     return fig, ax
 
 def plot_eigenvalues(eigenvalues, figsize=None, n=None, color='orange'):
+    """Simple bar plot of a sequence of values"""
     fig, ax = plt.subplots(figsize=figsize)
     ax.bar([i for i in range(0, len(eigenvalues[:n]))], eigenvalues[:n], color=color)
     ax.set_title("Eigenvalues")
     return fig, ax
 
-# def plot_clusters(network, clusters, scale=1, figsize=(10,10)):
-#     print(clusters)
-#     pos = cluster_positions(network, clusters, scale=scale)
-#     print(pos)
-#
-#     #fig, ax = plt.subplots(figsize=figsize)
-#     fig, ax = draw_flattened(network, pos=pos)
-#
-#
-#     ax.spines['left'].set_visible(True)
-#     ax.spines['bottom'].set_visible(True)
-#     ax.set_xticks([i for i in np.arange(0, 1.1, 0.1)])
-#     ax.set_yticks([i for i in np.arange(0, 1.1, 0.05)])
-#     ax.autoscale(enable=True)
-#     ax.set_xlabel("Forward Committor", size=15)
-#     ax.set_ylabel("Fitness", size=15)
-#
-#     return fig, ax
+
+def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12, 10), ax=None, scale_x=True):
+    """Plot the entries of a matrix
+
+    Parameters
+    ----------
+    matrix : 2D numpy.ndarray.
+        A matrix with numerical entries.
+
+    log : bool (default=True).
+        log10 transform data to visualize low-valued matrix entries (recommended for transition matrices).
+
+    remove_diag : bool (default=False).
+        Remove diagonal if True. Helps with visualizing matrix where diagonal is very dominant.
+
+    colorbar : bool (default=True)
+        If True plot colorbar mapping values to color.
+
+    figsize : tuple of int (default=(12,10).
+        Size of matplotlib figure.
+
+    scale_x : bool (default=True)
+        If True, markers will be scaled to fill one xaxis unit, if False markers will be scaled to fill one yaxis unit.
+        Both at the same time is not possible.
+
+    Returns
+    -------
+    fig : matplotlib figure.
+        matplotlib figure of size 'figsize'.
+
+    ax : matplotlib axis.
+        matplotlib axis that contains the matrix visualization.
+
+    """
+    T = matrix.copy()
+
+    if remove_diag:
+        np.fill_diagonal(T, val=0)
+
+    if log:
+        T = np.log10(T)
+        # Values that are too small will become -inf, we set them to the min. value of T
+        T[T == -inf] = 1
+        minv = np.min(T)
+        T[T == 1] = minv
+
+    # Normalize colors to min and max of T.
+    norm = mpl.colors.Normalize(vmin=np.min(T), vmax=np.max(T))
+
+    cmap = mpl.cm.get_cmap("Greys")
+
+    # Get a color for each value.
+    colors = [cmap(norm(val)) for val in list(T.flatten())]
+
+    # Get coordinates.
+    indices = np.indices(T.shape)
+    x = indices[1].flatten()
+    y = indices[0].flatten()
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+
+    if colorbar:
+        # Get color map
+        cm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        cm.set_array([])
+
+        fig.colorbar(cm)
+
+    ax.set_xlim(-1, T.shape[1])
+    ax.set_ylim(-1, T.shape[0])
+    ax.invert_yaxis()
+
+    # Get number of pixels per axis unit and calculate scatter marker size that fills exactly one axis unit.
+    x_pix, y_pix = ax.transData.transform([1, 1]) - ax.transData.transform((0, 0))
+    if scale_x:
+        s = x_pix ** 2  # Diameter of a marker in pixels is equal to the square root of markersize s.
+
+    else:
+        s = y_pix ** 2
+
+    ax.scatter(x, y, c=colors, cmap='Greys', s=s, marker='s')
+
+    return fig, ax
+
 
 def plot_network(
     network,
@@ -181,7 +249,7 @@ def plot_network(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure(figsize=figsize)
+        fig = ax.get_figure()
 
     # Flattened position.
     pos = flattened(network, vertical=True)
@@ -280,6 +348,7 @@ def plot_network(
         fig.colorbar(cm)
 
     return fig, ax
+
 
 def plot_clusters(
     network,
@@ -531,3 +600,22 @@ def plot_clusters(
     return fig, ax
 
 
+
+# def plot_clusters(network, clusters, scale=1, figsize=(10,10)):
+#     print(clusters)
+#     pos = cluster_positions(network, clusters, scale=scale)
+#     print(pos)
+#
+#     #fig, ax = plt.subplots(figsize=figsize)
+#     fig, ax = draw_flattened(network, pos=pos)
+#
+#
+#     ax.spines['left'].set_visible(True)
+#     ax.spines['bottom'].set_visible(True)
+#     ax.set_xticks([i for i in np.arange(0, 1.1, 0.1)])
+#     ax.set_yticks([i for i in np.arange(0, 1.1, 0.05)])
+#     ax.autoscale(enable=True)
+#     ax.set_xlabel("Forward Committor", size=15)
+#     ax.set_ylabel("Fitness", size=15)
+#
+#     return fig, ax

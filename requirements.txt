@@ -1,0 +1,7 @@
+numpy
+cython
+msmtools
+networkx
+gpmap
+gpgraph
+matplotlib

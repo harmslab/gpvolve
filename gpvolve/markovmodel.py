@@ -1,13 +1,37 @@
 from gpgraph import GenotypePhenotypeGraph
 from .utils import add_self_probability
-from .cluster import *
 import msmtools.analysis as mana
 
 import warnings
 import networkx as nx
 import numpy as np
 
-class EvoMSM(GenotypePhenotypeGraph):
+class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
+    """Class for building and analyzing evolutionary markov state models
+
+    Parameters
+    ----------
+    gpm : GenotypePhenotypeMap object.
+        A genotype-phenotype map object.
+
+    Attributes
+    ----------
+    transition_matrix : 2D numpy.ndarray.
+        The transition matrix that defines the probability of all mutations fixing in all backgrounds.
+
+    timescales : numpy.ndarray.
+        The relaxation timescales of the markov system calculated by eigendecomposition of the transition matrix.
+
+    eigenvalues : numpy.ndarray.
+        The eigenvalues of the markov system calculated by eigendecomposition of the transition matrix.
+
+    eigenvectors :
+        The eigenvectors of the markov system calculated by eigendecomposition of the transition matrix.
+
+    peaks :
+        Fitness peaks. A fitness peak is defined as nodes with a fitness higher than all its neighboring nodes.
+
+    """
     def __init__(self, gpm, *args, **kwargs):
         super().__init__(gpm, *args, **kwargs)
 
@@ -26,6 +50,9 @@ class EvoMSM(GenotypePhenotypeGraph):
         self._eigenvalues = None
         self._eigenvectors = None
         self._peaks = None
+        self._forward_committor = None
+        self._backward_committor = None
+
 
     def apply_selection(self, fitness_function, **params):
         """Compute fitness values from a user-defined phenotype-fitness function. A few basic functions can be found in
@@ -50,7 +77,20 @@ class EvoMSM(GenotypePhenotypeGraph):
         nx.set_node_attributes(self, name='fitness', values=values)
 
     def add_fixation_probability(self, fixation_model, **params):
-        """Calculate fixation probability along all edges and build transition matrix"""
+        """Calculate fixation probability along all edges and build transition matrix
+
+        Parameters
+        ----------
+        fixation_model : Python function.
+            A function that takes two numpy arrays of fitnesses and returns the fixation probability between the iths
+            fitness of the first array and the iths fitness of the second array.
+
+        Returns
+        -------
+        Nothing : None.
+            Sets transition_matrix attribute and networkx.DiGraph network edge attributes automatically.
+
+        """
         # Split all egdes into two tuples, each containing one node of each pair of nodes at the same position.
         nodepairs = list(zip(*self.edges))  # [(1, 4), (5, 8), (10, 25)] -> [(1, 5, 10), (4, 8, 25)]
 
@@ -62,33 +102,36 @@ class EvoMSM(GenotypePhenotypeGraph):
         mutation_prob = np.array([1/len(list(self.neighbors(node))) for node in nodepairs[0]])
         # mutation_prob = np.array(1 / nx.adjacency_matrix(self).sum(axis=0))[0]  # number of neighbors, exclude
 
-        # Compute fixation probabilities and get edge keys.
+        # Compute transition probability and get edge keys.
         probs = mutation_prob * fixation_model(fitness1, fitness2, **params)
 
-        # Set fixation probability for all edges. Values for the self-looping edges are incorrect at this point.
+        # Set transition_probability for all edges. Values for the self-looping edges are incorrect at this point.
         edges = self.edges.keys()
-        nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(edges, probs)))
+        nx.set_edge_attributes(self, name="transition_probability", values=dict(zip(edges, probs)))
 
         # Calculate transition matrix diagonal, i.e. self-looping probability.
-        self.transition_matrix = add_self_probability(nx.attr_matrix(self, edge_attr="fixation_probability")[0])
+        self.transition_matrix = add_self_probability(nx.attr_matrix(self, edge_attr="transition_probability")[0])
 
         # Update edge attributes of self-looping edges with transition matrix diagonal values.
         diag_indices = np.diag_indices(self.transition_matrix.shape[0])
         diag_vals = self.transition_matrix[diag_indices]
-        nx.set_edge_attributes(self, name="fixation_probability", values=dict(zip(self.self_edges, diag_vals)))
+        nx.set_edge_attributes(self, name="transition_probability", values=dict(zip(self.self_edges, diag_vals)))
 
-        # Update class attributes.
-        self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
-        self.timescales = mana.timescales(self.transition_matrix)
-        self.eigenvalues = mana.eigenvalues(self.transition_matrix)
-        self.eigenvectors = mana.eigenvectors(self.transition_matrix)
-        self.stationary_distribution = mana.stationary_distribution(self.transition_matrix)
-
-    def step_function(self):
-        pass
 
     def peaks(self):
-        """Find nodes without neighbors of higher fitness. Equal fitness allowed."""
+        """Find nodes without neighbors of higher fitness. Equal fitness allowed.
+
+        Parameters
+        ----------
+        self : EvoMSM object.
+            EvoMSM object with transition matrix.
+
+        Returns
+        -------
+        _peaks : list of sets.
+            List of peaks. Each peak is a set and can contain multiple nodes if it's a flat peak of nodes with identical
+            fitness.
+        """
         if self._peaks:
             return self._peaks
         else:
@@ -110,7 +153,24 @@ class EvoMSM(GenotypePhenotypeGraph):
             return self._peaks
 
     def soft_peaks(self, error):
-        """Find nodes without neighbors of higher fitness. Equal fitness allowed."""
+        """Find nodes without neighbors of higher fitness. Equal fitness allowed. Takes into account error, e.g. if
+        fitness1 has one neighbor (fitness2) with higher fitness, fitness1 is still considered a peak if
+        fitness1 + error is higher than or equal to fitness2 - error.
+
+        Parameters
+        ----------
+        self : EvoMSM object.
+            EvoMSM object with transition matrix.
+
+        error : list
+            List with one error value for each fitness. Must be in same order as fitness/phenotypes array.
+
+        Returns
+        -------
+        peaks : list of sets.
+            List of peaks. Each peak is a set and can contain multiple nodes if it's a flat peak of nodes with identical
+            fitness or nodes with indistinguishable fitness within the margin of error.
+        """
         peak_list = []
         fitnesses = pow(self.gpm.data.fitnesses, 10)
         error = pow(error, 10)
@@ -131,25 +191,45 @@ class EvoMSM(GenotypePhenotypeGraph):
         return peaks
 
 
+    def step_function(self):
+        """A function that bins phenotypes and allows one to define neutral networks in g-p-maps with continuous
+        phenotypes
+        """
+        pass
+
+    def neutral_network(self):
+        """Find neutral network. Look for connected components among phenotypes with same value or value within the same
+        pre-defines bin."""
+        pass
+
     @property
     def transition_matrix(self):
+        """Transition matrix of the """
         if self._transition_matrix.any():
             return self._transition_matrix
         else:
             try:
-                self._transition_matrix = np.array(nx.attr_matrix(self, edge_attr="fixation_probability", normalized=False)[0])
+                self._transition_matrix = np.array(nx.attr_matrix(self, edge_attr="transition_probability", normalized=False)[0])
             except KeyError:
                 print("Transition matrix doesn't exit yet. Add fixation probabilities first.")
 
     @transition_matrix.setter
     def transition_matrix(self, T):
+        """Set transition matrix
+
+        Parameters
+        ----------
+        T : 2D numpy.ndarray.
+            Transition matrix. Should be row stochastic and ergodic.
+        """
         # Check transition matrix.
-        if not mana.is_transition_matrix(T):
-            raise Exception("Not a transition matrix. Has to be square and rows must sum to one.")
-        if not mana.is_reversible(T):
-            warnings.warn("The transition matrix is not reversible.")
-        if not mana.is_connected(T):
-            warnings.warn("The transition matrix is not connected.")
+        if mana.is_transition_matrix(T):
+            if not mana.is_reversible(T):
+                warnings.warn("The transition matrix is not reversible.")
+            if not mana.is_connected(T):
+                warnings.warn("The transition matrix is not connected.")
+        else:
+            warnings.warn("Not a transition matrix. Has to be square and rows must sum to one.")
 
         self._transition_matrix = T
 
@@ -161,7 +241,6 @@ class EvoMSM(GenotypePhenotypeGraph):
             return stat_dist
         else:
             stat_dist = {node: prob for node, prob in enumerate(mana.stationary_distribution(self.transition_matrix))}
-            print(stat_dist)
             nx.set_node_attributes(self, name="stationary_distribution", values=stat_dist)
 
             return nx.get_node_attributes(self, name="stationary_distribution")
@@ -177,7 +256,7 @@ class EvoMSM(GenotypePhenotypeGraph):
     @property
     def timescales(self):
         """Get the relaxation timescales corresponding to the eigenvalues in arbitrary units."""
-        if self._timescales.any():
+        if isinstance(self._timescales, np.ndarray):
             return self._timescales
         else:
             self._timescales = mana.timescales(self.transition_matrix)
@@ -190,7 +269,7 @@ class EvoMSM(GenotypePhenotypeGraph):
     @property
     def eigenvalues(self):
         """Get the eigenvalues of the transition matrix"""
-        if self._eigenvalues.any():
+        if isinstance(self._eigenvalues, np.ndarray):
             return self._eigenvalues
         else:
             self._eigenvalues = mana.eigenvalues(self.transition_matrix)
@@ -203,7 +282,7 @@ class EvoMSM(GenotypePhenotypeGraph):
     @property
     def eigenvectors(self):
         """Get the eigenvalues of the transition matrix"""
-        if self._eigenvectors.any():
+        if isinstance(self._eigenvectors, np.ndarray):
             return self._eigenvectors
         else:
             self._eigenvectors = mana.eigenvectors(self.transition_matrix)
@@ -213,60 +292,96 @@ class EvoMSM(GenotypePhenotypeGraph):
     def eigenvectors(self, eigenvectors):
         self._eigenvectors = eigenvectors
 
-    @property
-    def clusters(self):
-        return self._clusters
+    def forward_committor(self, source=None, target=None):
+        """If no new source and target provided, return existing forward committor values, else, calculate them."""
+        if not source and not target:
+            if isinstance(self._forward_committor, np.ndarray):
+                return self._forward_committor
 
-    @clusters.setter
-    def clusters(self, clusters):
-        if isinstance(clusters, list):
-            self._clusters = clusters
+            else:
+                raise Exception('No forward committor calculated and no source and target provided.')
 
-    @property
-    def cluster_memberships(self):
-        return nx.get_node_attributes(self, name="memberships")
+        elif source and target:
+            self._forward_committor = self.calc_committor(self.transition_matrix, source, target,
+                                                          forward=True)
+            return self._forward_committor
 
-    @property
-    def cluster_assigments(self):
-        return nx.get_node_attributes(self, name="cluster")
+    def backward_committor(self, source=None, target=None):
+        """If no new source and target provided, return existing backward committor values, else, calculate them."""
+        if not source and not target:
+            if isinstance(self._backward_committor, np.ndarray):
+                return self._backward_committor
 
-    @property
-    def source(self):
-        """Get source node"""
-        return self._source
+            else:
+                raise Exception('No forward committor calculated and no source and target provided.')
 
-    @source.setter
-    def source(self, source):
-        """Set source node/genotype to list of nodes(type=int) or genotypes(type=str)"""
-        if isinstance(source, list):
-            if not isinstance(source[0], int):
-                df = self.gpm.data
-                self._source = [df[df['genotypes'] == s].index.tolist()[0] for s in source]
-            elif isinstance(source[0], int):
-                self._source = source
-        else:
-            raise Exception("Source has to be a list of at least one genotype(type=str) or node(type=int)")
+        elif isinstance(source, list) and isinstance(target, list):
+            self._backward_committor = self.calc_committor(self.transition_matrix, source, target,
+                                                           forward=False)
+            return self._backward_committor
 
-    @property
-    def target(self):
-        """Get target node"""
-        return self._target
+    @staticmethod
+    def calc_committor(T, source, target, forward=None):
+        """Calculate forward or backward committor for each node between source and target.
 
-    @target.setter
-    def target(self, target):
-        """Set target node/genotype to list of nodes(type=int) or genotypes(type=str)"""
-        if isinstance(target, list):
-            if not isinstance(target[0], int):
-                df = self.gpm.data
-                self._target = [df[df['genotypes'] == t].index.tolist()[0] for t in target]
-            elif isinstance(target[0], int):
-                self._target = target
-        else:
-            raise Exception("Target has to be a list of at least one genotype(type=str) or node(type=int)")
+        Parameters
+        ----------
+        T : 2D numpy.ndarray.
+            Row stochastic transition matrix.
 
-    @property
-    def total_flux(self):
-        return self._total_flux
+        source : list.
+            Source of probability flux. Committor value i will be the probability of leaving source and reaching node i
+            before reaching target or source again.
+
+        target : list.
+            Sink of probability flux. Committor value i will be the probability of reaching target from node i before
+            reaching source.
+
+        forward : bool.
+            If True, forward committor is calculated. If False, backward committor is calculated.
+
+        Returns
+        -------
+        committor : 1D numpy.ndarray.
+            Committor values in order of transition matrix.
+        """
+        committor = mana.committor(T, source, target, forward=forward)
+        return committor
+
+    # @property
+    # def source(self):
+    #     """Get source node"""
+    #     return self._source
+    #
+    # @source.setter
+    # def source(self, source):
+    #     """Set source node/genotype to list of nodes(type=int) or genotypes(type=str)"""
+    #     if isinstance(source, list):
+    #         if not isinstance(source[0], int):
+    #             df = self.gpm.data
+    #             self._source = [df[df['genotypes'] == s].index.tolist()[0] for s in source]
+    #         elif isinstance(source[0], int):
+    #             self._source = source
+    #     else:
+    #         raise Exception("Source has to be a list of at least one genotype(type=str) or node(type=int)")
+    #
+    # @property
+    # def target(self):
+    #     """Get target node"""
+    #     return self._target
+    #
+    # @target.setter
+    # def target(self, target):
+    #     """Set target node/genotype to list of nodes(type=int) or genotypes(type=str)"""
+    #     if isinstance(target, list):
+    #         if not isinstance(target[0], int):
+    #             df = self.gpm.data
+    #             self._target = [df[df['genotypes'] == t].index.tolist()[0] for t in target]
+    #         elif isinstance(target[0], int):
+    #             self._target = target
+    #     else:
+    #         raise Exception("Target has to be a list of at least one genotype(type=str) or node(type=int)")
+
 
     # def peaks_(self):
     #     """

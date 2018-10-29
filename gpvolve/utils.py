@@ -1,20 +1,316 @@
 from scipy.sparse.csgraph import shortest_path
 import networkx as nx
-from scipy.sparse import dok_matrix
+from scipy.sparse import csr_matrix
 import numpy as np
+import itertools
+
+
+def get_sub_paths(paths, start, end):
+    """Get part of path between 'start' node and 'end' node.
+    Parameters
+    ----------
+    paths : dict.
+        dict of paths and probabiltiites. Paths have to tuples of integers.
+
+    start : any single list element.
+        Element with which sub-path should start.
+
+    end : any single list element.
+        Element with which sub-path should start.
+
+    Returns
+    -------
+    subpaths : dict.
+        Dict of subpaths. Some subpaths might be identical, which will be treated as one and the probabilities summed.
+
+        """
+    subpaths = {}
+    for path, prob in paths.items():
+        p = list(path)
+        try:
+            s = p.index(start)
+        except ValueError:
+            raise Exception("%s not in path %s" % (s, path))
+        try:
+            e = p.index(end)
+        except ValueError:
+            raise Exception("%s not in path %s" % (e, path))
+
+        try:
+            subpaths[tuple(p[s:e + 1])] += prob
+        except KeyError:
+            subpaths[tuple(p[s:e + 1])] = prob
+
+
+    return subpaths
+
+
+def paths_that_contain(paths, nodes, bool_and=False):
+    """Return paths that contain at least one or all of the nodes.
+
+    Parameters
+    ----------
+    paths : list.
+        list of paths where each path is a tuple of integers. Example : [(1,2,3), (1,3,4)]
+
+    nodes : list.
+        List of nodes that the paths are going to be searched for.
+
+    bool_and : bool.
+        If True, the sufficient requirement is that all nodes are in a path. If False, the sufficient
+        requirement is that at least one of the nodes is in a path.
+
+    Returns
+    -------
+    paths_ : list.
+        list of paths that contain at least one or all of the nodes in 'nodes'.
+    """
+    paths_ = []
+
+    # Must contain all nodes.
+    if bool_and:
+        for path in paths:
+            contains = True
+            for node in nodes:
+                if node in path:
+                    continue
+                else:
+                    contains = False
+                    break
+            # If no breaks, all nodes are in path. (Sufficient requirement.)
+            if contains:
+                paths_.append(path)
+
+    # Must contain at least one of the nodes.
+    elif not bool_and:
+        for path in paths:
+            for node in nodes:
+                if node in path:
+                    paths_.append(path)
+                    break
+    return paths_
+
+
+def paths_that_do_not_contain(paths, nodes, bool_and=True):
+    """Return paths that do not contain at least one or all of the nodes.
+
+    Parameters
+    ----------
+    paths : list.
+        list of paths where each path is a tuple of integers. Example : [(1,2,3), (1,3,4)]
+
+    nodes : list.
+        List of nodes that the paths are going to be searched for.
+
+    bool_and : bool.
+        If True, the sufficient requirement is that all nodes are not in a path. If False, the sufficient
+        requirement is that at least one of the nodes is not in a path.
+
+    Returns
+    -------
+    paths_ : list.
+        list of paths that do not contain at least one or all of the nodes in 'nodes'.
+    """
+    paths_ = []
+
+    # Must not contain all nodes.
+    if bool_and:
+        for path in paths:
+            contains = True
+            for node in nodes:
+                if node not in path:
+                    continue
+                else:
+                    contains = False
+                    break
+            # If no breaks, all nodes are not in path. (Sufficient requirement.)
+            if contains:
+                paths_.append(path)
+
+    # Must not contain at least one of the nodes.
+    elif not bool_and:
+        for path in paths:
+            for node in nodes:
+                if node not in path:
+                    paths_.append(path)
+                    break
+    return paths_
+
+
+def fraction_of_paths(paths_dict, fraction=1.):
+    """Get fraction of strongest paths whose probability sum to a certain fraction.
+
+    Parameters
+    ----------
+    paths_dict : dict.
+        Dictionary of paths (tuple) and probabilities (float). Should be normalized, otherwise fraction might not
+        actually get the fraction.
+
+    fraction : float/int (default=1.).
+        Find most likely paths which have a summed probability of at least 'fraction'.
+
+    Returns
+    -------
+    new_dict : dict.
+        Dictionary of most likely paths which have a summed probability of at least 'fraction'.
+    """
+    # Sort paths and probababilties from highest to lowest probability.
+    sorted_probs, sorted_paths = zip(*sorted(zip(paths_dict.values(), paths_dict.keys()), reverse=True))
+    probsum = 0
+
+    for i, prob in enumerate(sorted_probs):
+        probsum += prob
+
+        # Enough paths to reach fraction?
+        if probsum >= fraction:
+            new_dict = dict(zip(sorted_paths[:i+1], sorted_probs[:i+1]))
+            return new_dict
+    # Not enough paths in whole dictionary to reach fraction.
+    new_dict = paths_dict
+    return new_dict
+
+
+def paths_and_probs_to_dict(paths, probs, normalize=False):
+    """Turn paths and path probabilities as returned from Transition Path Theory into dictionary.
+
+    Parameters
+    ----------
+    paths : 1D numpy.ndarray.
+        Array of paths where each path is a numpy array of integer on its own.
+
+    probs : 1D numpy.ndarray.
+        Array of path probabailities.
+
+    Returns
+    -------
+    paths_dict : dict.
+        Dictionary of paths (tuples) and probabilities (float)
+    """
+    pathlist = list(tuple(path) for path in paths)
+
+    if normalize:
+        psum = sum(probs)
+        pathproblist = [prob/psum for prob in probs]
+    else:
+        pathproblist = list(probs)
+
+    paths_dict = dict(zip(pathlist, pathproblist))
+
+    return paths_dict
+
+
+def find_max(gpmsm, nodes=None, attribute='fitness'):
+    """Return node with highest fitness from subset of nodes
+
+    Parameters
+    ----------
+    gpmsm : GenotypePhenotypeMSM object.
+        Each node has to have the node attribute 'attribute'.
+
+    nodes : list.
+        List of nodes from which to pick the one with max attribute. If None, all nodes are compared.
+
+    attribute : str.
+        Which node attribute should be compared.
+
+    Returns
+    -------
+    max_node : int.
+        Node with maximum value for attribute compared to other nodes in 'nodes'.
+    """
+    if not list(nodes):
+        nodes = list(gpmsm.nodes)
+    idx = np.argmax(np.array([gpmsm.node[node][attribute] for node in nodes]))
+    max_node = nodes[idx]
+
+    return max_node
+
+
+def dictdict_do_dokmatrix(dictdict):
+    """Converts dictionary of dictionaries into matrix.
+    Example: {0: {1: 0.4, 2: 0.6}, 1: {0: 0.1, 2: 0.9}, 2: {0: 0.5, 1: 0.5}}
+    to numpy.ndarray([[0, 0.4, 0.6], [0.1, 0, 0.9,], [0.5, 0.5, 0])
+    """
+    row = []
+    col = []
+    data = []
+    for out_dic_key, in_dic in dictdict.items():
+        for key, val in in_dic.items():
+            row.append(out_dic_key)
+            col.append(key)
+            data.append(val)
+    S = csr_matrix((data, (row, col)))
+
+    return S
+
+
+def paths_to_endnode(paths):
+    """Take dictionary of paths (keys) and their probability (values) and remove everything except the last node of the
+    path from the key. Is useful for assigning genotypes to clusters based on their relative probability of reaching a
+    certain peak.
+    """
+    endnode_dict = {}
+    for path, prob in paths.items():
+        try:
+            endnode_dict[path[-1]] += prob
+        except KeyError:
+            endnode_dict[path[-1]] = prob
+
+    return endnode_dict
+
+
+def euclidean_distance(prev_pmf, current_pmf):
+    """Calc. euclidean distance between two probability mass function (pmf). Both pmf have to have the same order
+    but not the same length -> current_pmf is allowed to to be longer.
+    """
+    euclid_dist = 0
+    # Calc. euclidean distance of each path in current pmf to pmf at step current - k (current - previous).
+    for val in current_pmf:
+        try:
+            euclid_dist += abs(current_pmf[val] - prev_pmf[val])
+        # If a new path has been sampled since last lag interval, euclidean distance = prob. of that path.
+        except KeyError:
+            euclid_dist += current_pmf[val]
+    return euclid_dist
+
+
+def check_convergence(pmf_dict, conv_func, **params):
+    """Calc. for a ordered seqeuence of probability mass functions.
+
+    Parameters
+    ----------
+    pmf_dict : dict.
+        Dictionary of dictionaries. The outer dict. contains the sequence of probability mass functions (dict.) which is
+        checked for convergence. The probability mass functions have to be in the form of an ordered dictionary, where
+        the key corresponds to different values of a random variable and the values correspond to the probability
+        (between 0 and 1) of the variable to take that value.
+
+    conv_func : Python function.
+        Function that is going to be used to assess the similarity of two probability mass functions. Has to take two
+        dictionaries (prob. mass func.) as first two arguments
+
+    Returns
+    -------
+    conv : list.
+        List containing the similarity values for all consecutive pairs of probability mass functions.
+    """
+    intervals = list(pmf_dict.keys())
+    conv = []
+    for i in range(1, len(intervals)):
+        prev_pmf = pmf_dict[intervals[i - 1]]
+        curr_pmf = pmf_dict[intervals[i]]
+        conv.append(conv_func(prev_pmf, curr_pmf, **params))
+
+    return conv
 
 
 def rm_self_prob(tm):
     """Remove transition matrix diagonal and renormalize rows to 1"""
-    np.fill_diagonal(tm, 0)
-    row_sums = tm.sum(axis=1)
-    tm_norm = tm / row_sums[:, np.newaxis]
-    return tm_norm
-
-
-def to_dok_matrix(matrix):
-    D = dok_matrix(matrix)
-    return D
+    T = tm.copy()
+    np.fill_diagonal(T, 0)
+    row_sums = T.sum(axis=1)
+    T_norm = T / row_sums[:, np.newaxis]
+    return T_norm
 
 
 def paths_prob_to_edges_flux(paths_prob):
@@ -80,6 +376,7 @@ def monotonic_incr(sequence, values):
 
 
 def combinations(source, target):
+    """All combinations between two lists source and target."""
     c = []
     for s in source:
         for t in target:
@@ -113,7 +410,6 @@ def add_self_probability(T):
     row_sums = T.sum(axis=1)
     row, col = np.diag_indices(T.shape[0])
     T[row, col] = np.ones(row_sums.shape[0]) - row_sums
-    print(T)
     return T
 
 
@@ -212,3 +508,51 @@ def cluster_positions(network, clusters, xaxis, yaxis, scale=None):
     return pos
 
 
+def max_prob_matrix(T, source=None, target=None):
+    """Transition matrix that only allows the step with maximum probability"""
+    indices = np.argmax(T, axis=1)
+    indptr = np.array(range(T.shape[0]+1))
+    data = np.ones(T.shape[0])
+    M = csr_matrix((data, indices, indptr), shape=T.shape).toarray()
+    return M
+
+
+def paths_prob_to_edges_flux(paths_prob):
+    """Chops a list of paths into its edges, and calculate the probability
+    of that edge across all paths.
+
+    Parameters
+    ----------
+    paths: list of tuples
+        list of the paths.
+
+    Returns
+    -------
+    edge_flux: dictionary
+        Edge tuples as keys, and probabilities as values.
+    """
+    edge_flux = {}
+    for path, prob in paths_prob.items():
+
+        for i in range(len(path)-1):
+            # Get edge
+            edge = (path[i], path[i+1])
+
+            # Get path probability to edge.
+            if edge in edge_flux:
+                edge_flux[edge] += prob
+
+            # Else start at zero
+            else:
+                edge_flux[edge] = prob
+
+    return edge_flux
+
+
+def edges_flux_to_node_flux(G, attribute_name='flux'):
+    """Sum all flux from incoming edges for each node in networkx object"""
+    node_fluxes = {}
+    for node in G.nodes:
+        node_flux = sum([edge[2] for edge in list(G.in_edges(node, data=attribute_name)) if edge[2]])
+        node_fluxes[node] = node_flux
+    return node_fluxes
