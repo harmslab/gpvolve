@@ -218,7 +218,7 @@ def find_max(gpmsm, nodes=None, attribute='fitness'):
     max_node : int.
         Node with maximum value for attribute compared to other nodes in 'nodes'.
     """
-    if not list(nodes):
+    if not nodes:
         nodes = list(gpmsm.nodes)
     idx = np.argmax(np.array([gpmsm.node[node][attribute] for node in nodes]))
     max_node = nodes[idx]

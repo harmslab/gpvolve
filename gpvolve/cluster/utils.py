@@ -209,6 +209,7 @@ def crispness(membership_matrix, clusters):
     M = membership_matrix.copy()
     cluster_order = list(itertools.chain(*clusters))
     S = M[cluster_order,:]
+
     trace = 0
     start = 0
     for i, cluster in enumerate(clusters):

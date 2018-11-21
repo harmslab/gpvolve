@@ -76,7 +76,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         values = {node: fitness for node, fitness in enumerate(self.gpm.data.fitnesses.tolist())}
         nx.set_node_attributes(self, name='fitness', values=values)
 
-    def add_fixation_probability(self, fixation_model, **params):
+    def build_transition_matrix(self, fixation_model, **params):
         """Calculate fixation probability along all edges and build transition matrix
 
         Parameters
