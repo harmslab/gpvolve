@@ -45,131 +45,6 @@ def get_sub_paths(paths, start, end):
     return subpaths
 
 
-def paths_that_contain(paths, nodes, bool_and=False):
-    """Return paths that contain at least one or all of the nodes.
-
-    Parameters
-    ----------
-    paths : list.
-        list of paths where each path is a tuple of integers. Example : [(1,2,3), (1,3,4)]
-
-    nodes : list.
-        List of nodes that the paths are going to be searched for.
-
-    bool_and : bool.
-        If True, the sufficient requirement is that all nodes are in a path. If False, the sufficient
-        requirement is that at least one of the nodes is in a path.
-
-    Returns
-    -------
-    paths_ : list.
-        list of paths that contain at least one or all of the nodes in 'nodes'.
-    """
-    paths_ = []
-
-    # Must contain all nodes.
-    if bool_and:
-        for path in paths:
-            contains = True
-            for node in nodes:
-                if node in path:
-                    continue
-                else:
-                    contains = False
-                    break
-            # If no breaks, all nodes are in path. (Sufficient requirement.)
-            if contains:
-                paths_.append(path)
-
-    # Must contain at least one of the nodes.
-    elif not bool_and:
-        for path in paths:
-            for node in nodes:
-                if node in path:
-                    paths_.append(path)
-                    break
-    return paths_
-
-
-def paths_that_do_not_contain(paths, nodes, bool_and=True):
-    """Return paths that do not contain at least one or all of the nodes.
-
-    Parameters
-    ----------
-    paths : list.
-        list of paths where each path is a tuple of integers. Example : [(1,2,3), (1,3,4)]
-
-    nodes : list.
-        List of nodes that the paths are going to be searched for.
-
-    bool_and : bool.
-        If True, the sufficient requirement is that all nodes are not in a path. If False, the sufficient
-        requirement is that at least one of the nodes is not in a path.
-
-    Returns
-    -------
-    paths_ : list.
-        list of paths that do not contain at least one or all of the nodes in 'nodes'.
-    """
-    paths_ = []
-
-    # Must not contain all nodes.
-    if bool_and:
-        for path in paths:
-            contains = True
-            for node in nodes:
-                if node not in path:
-                    continue
-                else:
-                    contains = False
-                    break
-            # If no breaks, all nodes are not in path. (Sufficient requirement.)
-            if contains:
-                paths_.append(path)
-
-    # Must not contain at least one of the nodes.
-    elif not bool_and:
-        for path in paths:
-            for node in nodes:
-                if node not in path:
-                    paths_.append(path)
-                    break
-    return paths_
-
-
-def fraction_of_paths(paths_dict, fraction=1.):
-    """Get fraction of strongest paths whose probability sum to a certain fraction.
-
-    Parameters
-    ----------
-    paths_dict : dict.
-        Dictionary of paths (tuple) and probabilities (float). Should be normalized, otherwise fraction might not
-        actually get the fraction.
-
-    fraction : float/int (default=1.).
-        Find most likely paths which have a summed probability of at least 'fraction'.
-
-    Returns
-    -------
-    new_dict : dict.
-        Dictionary of most likely paths which have a summed probability of at least 'fraction'.
-    """
-    # Sort paths and probababilties from highest to lowest probability.
-    sorted_probs, sorted_paths = zip(*sorted(zip(paths_dict.values(), paths_dict.keys()), reverse=True))
-    probsum = 0
-
-    for i, prob in enumerate(sorted_probs):
-        probsum += prob
-
-        # Enough paths to reach fraction?
-        if probsum >= fraction:
-            new_dict = dict(zip(sorted_paths[:i+1], sorted_probs[:i+1]))
-            return new_dict
-    # Not enough paths in whole dictionary to reach fraction.
-    new_dict = paths_dict
-    return new_dict
-
-
 def paths_and_probs_to_dict(paths, probs, normalize=False):
     """Turn paths and path probabilities as returned from Transition Path Theory into dictionary.
 
@@ -313,38 +188,6 @@ def rm_self_prob(tm):
     return T_norm
 
 
-def paths_prob_to_edges_flux(paths_prob):
-    """Chops a list of paths into its edges, and calculate the probability
-    of that edge across all paths.
-
-    Parameters
-    ----------
-    paths: list of tuples
-        list of the paths.
-
-    Returns
-    -------
-    edge_flux: dictionary
-        Edge tuples as keys, and probabilities as values.
-    """
-    edge_flux = {}
-    for path, prob in paths_prob.items():
-
-        for i in range(len(path)-1):
-            # Get edge
-            edge = (path[i], path[i+1])
-
-            # Get path probability to edge.
-            if edge in edge_flux:
-                edge_flux[edge] += prob
-
-            # Else start at zero
-            else:
-                edge_flux[edge] = prob
-
-    return edge_flux
-
-
 def path_prob(path, T):
     prob = 1
     for i in range(len(path)-1):
@@ -411,8 +254,6 @@ def add_self_probability(T):
     row, col = np.diag_indices(T.shape[0])
     T[row, col] = np.ones(row_sums.shape[0]) - row_sums
     return T
-
-
 
 
 def add_probability(network, edges, model, edge_weight=1, **params):

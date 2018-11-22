@@ -10,7 +10,7 @@ You can use this library to:
    4. Visualize the outputs of all of the above.
 
 The core-utilities of this library are built on top of the pyemma and msmtools packages.
-For a deeper understanding of these tools, we recommend to read the docs and scientific
+For a deeper understanding of these tools, we recommend reading the docs and scientific
 references of the respective libraries ([1]_, [2]_, [3]_).
 
 A rationale for treating fitness landscapes as markov systems can be found in [4]_.
@@ -34,44 +34,48 @@ Calculate and plot the fluxes between wildtype and triple mutant on an example g
 
 .. code-block:: python
 
-   # Import the base class and a visualization tool.
-   from gpvolve.markovmodel import EvoMarkovStateModel
-   from gpvolve.visualization import draw_network
+   # Import base class, Transition Path Theory class and functions for building Markov Model.
+   from gpvolve import GenotypePhenotypeMSM, TransitionPathTheory, linear_skew, mccandlish, find_max
+   # Import visualization tool.
+   from gpvolve.visualization import plot_network
+   # Import GenotypePhenotypeMap class for handling genotype-phenotype data.
+   from gpmap import GenotypePhenotypeMap
+   # Helper functions.
+   from scipy.sparse import dok_matrix
 
    # Genotype-phenotype map data.
    wildtype = "AAA"
    genotypes = ["AAA", "AAT", "ATA", "TAA", "ATT", "TAT", "TTA", "TTT"]
    phenotypes = [0.8, 0.81, 0.88, 0.89, 0.82, 0.82, 0.95, 1.0]
 
-   # Create genotype-phenotype map object.
+   # Instantiate Markov model class.
    gpm = GenotypePhenotypeMap(wildtype=wildtype,
                               genotypes=genotypes,
                               phenotypes=phenotypes)
 
-   # Define source and target (Can be done at a later point as well)
-   source = ["AAA"]
-   target = ["TTT"]
 
-   # Create a evolutionary markov state model from the genotype-phenotype map.
-   M = EvoMarkovStateModel(gpm=gpm,
-                           selection_gradient=1,
-                           population_size=100,
-                           two_step_probability=0,
-                           source=source,
-                           target=target)
+   # Instantiate a evolutionary Markov State Model from the genotype-phenotype map.
+   gpmsm = GenotypePhenotypeMSM(gpm)
 
-   # Compute reactive fluxes between source and target.
-   M.tpt()
-   fluxes = M.net_flux
-   total_flux = M.total_flux
+   # Map fitnesses to phenotypes.
+   gpmsm.apply_selection(fitness_function=linear_skew, selection_gradient=1)
+
+   # Build Markov State Model based on 'mccandlish' fixation probability function.
+   gpmsm.build_transition_matrix(fixation_model=mccandlish, population_size=100)
+
+   # Find global fitness peak.
+   fitness_peak = find_max(gpmsm=gpmsm, attribute='fitness')
+
+   # Compute fluxes from wildtype to fitness peak.
+   fluxes = TransitionPathTheory(gpmsm, source=[0], target=[fitness_peak])
 
    # Normalize flux.
-   norm_fluxes = fluxes/total_flux
+   norm_fluxes = fluxes.net_flux/fluxes.total_flux
 
    # Plot the network and the fluxes
-   fig, ax = draw_network(M=M,
-                          clusters=None,
-                          flux=norm_fluxes,
+   fig, ax = plot_network(gpmsm,
+                          flux=dok_matrix(norm_fluxes),
+                          edge_labels=True,
                           colorbar=True)
 
 .. image:: img/basic_example.png
@@ -81,11 +85,5 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
-   readme
-   installation
-   usage
-   modules
-   contributing
-   history
-   api
+   api/main
 
