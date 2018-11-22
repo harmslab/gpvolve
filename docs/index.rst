@@ -1,6 +1,9 @@
 ``gpvolve``
 ===========
 
+Introduction
+------------
+
 A Python API for the simulation and analysis of evolution in genotype-phenotype space.
 You can use this library to:
 
