@@ -22,7 +22,7 @@ def plot_eigenvalues(eigenvalues, figsize=None, n=None, color='orange'):
     return fig, ax
 
 
-def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(12, 10), ax=None, scale_x=True):
+def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(5, 5), ax=None, scale_x=True):
     """Plot the entries of a matrix
 
     Parameters
@@ -494,16 +494,17 @@ def plot_clusters(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure(figsize=figsize)
+        fig = ax.get_figure()
 
     # Positions of circular clusters.
     pos = cluster_positions(network, clusters, xaxis=xaxis, yaxis=yaxis, scale=cluster_scale)
+    ax.set_ylim(0.92, 1.05)
     ax.spines['left'].set_visible(True)
     ax.spines['bottom'].set_visible(True)
     ax.autoscale(enable=True)
     ax.set_xlabel("Forward Committor", size=15)
     ax.set_ylabel("Fitness", size=15)
-    ax.axis("equal")
+    ax.axis("auto")
 
     if flux is None:
         # All edges

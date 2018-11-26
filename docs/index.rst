@@ -8,8 +8,8 @@ A Python API for the simulation and analysis of evolution in genotype-phenotype 
 You can use this library to:
 
    1. Build a markov state model from a genotype-phenotype-map.
-   2. Find clusters of genotypes that represent metastable states of the system.
-   3. Compute fluxes and pathways between pairs of genotypes and/or clusters of interest.
+   2. Find clusters of genotypes that represent metastable states of the system, using PCCA+.
+   3. Compute fluxes and pathways between pairs of genotypes and/or clusters of interest, using Transition Path Theory.
    4. Visualize the outputs of all of the above.
 
 The core-utilities of this library are built on top of the pyemma and msmtools packages.
@@ -88,5 +88,6 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
+   pages/quick_guide
    api/main
 

@@ -82,8 +82,8 @@ def find_max(gpmsm, nodes=None, attribute='fitness'):
     gpmsm : GenotypePhenotypeMSM object.
         Each node has to have the node attribute 'attribute'.
 
-    nodes : list.
-        List of nodes from which to pick the one with max attribute. If None, all nodes are compared.
+    nodes : list or numpy.ndarray.
+        List/array of nodes from which to pick the one with max attribute. If None, all nodes are compared.
 
     attribute : str.
         Which node attribute should be compared.
@@ -93,7 +93,7 @@ def find_max(gpmsm, nodes=None, attribute='fitness'):
     max_node : int.
         Node with maximum value for attribute compared to other nodes in 'nodes'.
     """
-    if not nodes:
+    if not isinstance(nodes, list) or isinstance(nodes, np.ndarray):
         nodes = list(gpmsm.nodes)
     idx = np.argmax(np.array([gpmsm.node[node][attribute] for node in nodes]))
     max_node = nodes[idx]

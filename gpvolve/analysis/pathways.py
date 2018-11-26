@@ -143,7 +143,7 @@ def paths_that_contain(paths, nodes, bool_and=False):
                 else:
                     contains = False
                     break
-            # If no breaks, all nodes are in path. (Sufficient requirement.)
+            # If no breaks happen, all nodes are in path. (Sufficient requirement.)
             if contains:
                 paths_.append(path)
 
@@ -182,15 +182,15 @@ def paths_that_do_not_contain(paths, nodes, bool_and=True):
     # Must not contain all nodes.
     if bool_and:
         for path in paths:
-            contains = True
+            doesnt_contain = True
             for node in nodes:
                 if node not in path:
                     continue
                 else:
-                    contains = False
+                    doesnt_contain = False
                     break
             # If no breaks, all nodes are not in path. (Sufficient requirement.)
-            if contains:
+            if doesnt_contain:
                 paths_.append(path)
 
     # Must not contain at least one of the nodes.
