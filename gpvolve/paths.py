@@ -178,12 +178,16 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
     paths_at_intervals = {0: {}}
     # Dictionary that counts how often paths appeared (indexed by path).
     paths = {}
+
+    conv_metric = None
     while counter < max_iter:
         counter += 1
         path = [source]
 
         while path[-1] not in target:
             state = path[-1]
+            if state == source and len(path) > 1:
+                break
             # Indices of states with nonzero transition probability.
             nonzero_ind = np.nonzero(T[state])[0]
             # Probability mass function for states with nonzero transition probability.
@@ -195,12 +199,16 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
 
             path.append(state)
 
+        if state == source and len(path) > 1:
+            counter -= 1
+            continue
+
         # Count of sampled path + 1.
         try:
             paths[tuple(path)] += 1
         except KeyError:
             paths[tuple(path)] = 1
-
+        print(paths)
 
         if counter % interval == 0:
             if out == 'count':

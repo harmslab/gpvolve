@@ -8,6 +8,16 @@ from scipy.sparse import dok_matrix
 import itertools
 
 class GenotypePhenotypeClusters(object):
+    """Handles clustered genotype-phenotype maps.
+
+    Parameters
+    ----------
+    gpmsm : GenotypePhenotypeMSM object.
+        A GenotypePhenotypeMSM object.
+
+    clusters: list of tuples.
+        List of clusters where each cluster is a tuple containing the indices (int) of the genotypes.
+    """
     def __init__(self, gpmsm, clusters):
         self.gpmsm = gpmsm
 
