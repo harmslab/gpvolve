@@ -2,6 +2,10 @@
 
 *A python package for extracting tevolutionary trajectories from genotype-phenotype-maps*
 
+[![](https://img.shields.io/pypi/v/gpvolve.svg)](https://pypi.python.org/pypi/gpvolve)
+[![](https://readthedocs.org/projects/gpvolve/badge/?version=latest)](https://gpvolve.readthedocs.io/en/latest/?badge=latest)
+
+
 A Python API for the simulation and analysis of evolution in genotype-phenotype space.
 You can use this library to:
 
@@ -53,7 +57,7 @@ gpmsm.build_transition_matrix(fixation_model=mccandlish, population_size=100)
 fitness_peak = find_max(gpmsm=gpmsm, attribute='fitness')
 ```
 
-Calculate and plot the fluxes between wildtype and triple mutant.
+Calculate and plot the trajectory flux between the wildtype and triple mutant.
 ```python
 
 # Compute fluxes from wildtype to fitness peak.
