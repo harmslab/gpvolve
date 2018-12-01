@@ -1,19 +1,5 @@
-Quick Guide
-===========
-
-Introduction
-------------
-
-``gpvolve`` is a Python API that allows the user to analyze genotype-phenotype data with tools from chemical physics.
-Using the library, you can:
-
-   1. Build a markov state model from a genotype-phenotype-map.
-   2. Find clusters of genotypes that represent metastable states of the system, using PCCA+.
-   3. Compute fluxes and pathways between pairs of genotypes and/or clusters of interest, using Transition Path Theory.
-   4. Visualize the outputs of all of the above.
-
-Computational Pipeline
-----------------------
+Typical Pipeline
+================
 
 The tools included in the ``gpvolve`` API can be combined into a computational pipeline which simplifies the repetition
 of analyzes. We recommend using Jupyter notebooks for this purpose.
@@ -213,38 +199,3 @@ much less constrained than the ones between 1 and 2, which we quantify by calcul
     print("Path\tPath count\tMean Path Divergence\n%s\t%s\t\t%s\n%s\t%s\t\t%s\n%s\t%s\t\t%s" % ("1-2", len(paths124_12), round(mdp124_12,2), "2-4", len(paths124_24), round(mdp124_24,2), "1-2-4", len(paths124), round(mpd124, 2)))
 
 .. image:: ../img/path_analysis.png
-
-Installation and Dependencies
------------------------------
-
-Installation
-~~~~~~~~~~~~
-
-User can clone the github repository and install it locally.
-
-.. code-block:: bash
-
-    git clone https://github.com/harmslab/gpvolve
-    cd gpvolve
-    pip install -e .
-
-Dependencies
-~~~~~~~~~~~~
-
-The following dependencies are required for the ``gpvolve`` package.
-
-* gpmap_: Module for constructing powerful genotype-phenotype map python data-structures.
-* gpgraph_: Module for graphic representation of genotype-phenotype maps built on top of networkx.
-* networkx_: Python package for construction and analysis of networks and graphs.
-* msmtools_: Python package containing tools for construction and analysis of markov models, including Transition Path Theory and PCCA+.
-* numpy_: Python's array manipulation package.
-* cython_: Programming language written in Python with C-like performance.
-* matplotlib_: Python plotting library.
-
-.. _gpmap: https://github.com/harmslab/gpmap
-.. _gpgraph:: https://github.com/harmslab/gpgraph
-.. _networkx: https://github.com/networkx
-.. _msmtools: https://github.com/markovmodel/msmtools
-.. _numpy: http://www.numpy.org/
-.. _cython: https://github.com/cython/cython
-.. _matplotlib: http://matplotlib.org/

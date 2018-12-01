@@ -7,9 +7,7 @@
 
 *A Python API for simulating and analyzing evolution in genotype-phenotype space.*
 
-
 GPvolve can used to:
-
 
 1. Build a markov state model from a genotype-phenotype-map.
 2. Find clusters of genotypes that represent metastable states of the system, using PCCA+.
@@ -29,12 +27,13 @@ interface. Instead, we encourage you use this package inside `Jupyter notebooks`
 .. _`Jupyter notebooks`: https://www.jupyter.org
 
 
-Documentation
--------------
+User Documentation
+------------------
 .. toctree::
    :maxdepth: 1
 
-   pages/quick_guide
+   pages/pipeline
+   pages/installation
    pages/selection
    pages/fixation
    api/main
