@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.sparse import csr_matrix
-from .utils import rm_self_prob
+
 
 def to_greedy(transition_matrix):
     """Turn transition matrix into 'greedy' transition matrix. Only the step with the highest positive fitness
@@ -79,7 +79,7 @@ def moran(fitness1, fitness2, population_size):
         fitness2[index] = copy + copy / 10 ** 6
 
     # Calculate fixation probability.
-    sij = np.nan_to_num((1 - (fitness1/fitness2)) / (1 - pow(fitness1/fitness2, population_size)))
+    sij = np.nan_to_num((1 - (fitness1 / fitness2)) / (1 - pow(fitness1 / fitness2, population_size)))
     return sij
 
 
@@ -113,7 +113,7 @@ def mccandlish(fitness1, fitness2, population_size):
         copy = fitness2[index]
         fitness2[index] = copy + copy / 10 ** 6
 
-    sij = (1 - np.exp(-2 * (fitness2-fitness1))) / (1 - np.exp(-2 * population_size * (fitness2-fitness1)))
+    sij = (1 - np.exp(-2 * (fitness2 - fitness1))) / (1 - np.exp(-2 * population_size * (fitness2 - fitness1)))
     return sij
 
 
@@ -175,5 +175,3 @@ def equal_fixation(fitness1, fitness2):
     sij[sij <= 1] = 0
     sij[sij > 1] = 1
     return sij
-
-

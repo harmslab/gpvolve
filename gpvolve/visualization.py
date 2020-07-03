@@ -1,10 +1,12 @@
-from .utils import *
-import matplotlib.pyplot as plt
-from gpgraph.draw import *
-from scipy import sparse
-import numpy as np
-from numpy import inf
 import matplotlib as mpl
+from gpgraph import flattened
+from gpgraph.draw import *
+from gpgraph.pyplot import truncate_colormap
+from matplotlib import colors
+from numpy import inf
+from scipy import sparse
+
+from .utils import *
 
 
 def plot_timescales(timescales, figsize=None, n=None, color='orange'):
@@ -13,6 +15,7 @@ def plot_timescales(timescales, figsize=None, n=None, color='orange'):
     ax.bar([i for i in range(0, len(timescales[:n]))], timescales[:n], color=color)
     ax.set_title("Timescales")
     return fig, ax
+
 
 def plot_eigenvalues(eigenvalues, figsize=None, n=None, color='orange'):
     """Simple bar plot of a sequence of values"""
@@ -70,10 +73,11 @@ def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(5, 
     # Normalize colors to min and max of T.
     norm = mpl.colors.Normalize(vmin=np.min(T), vmax=np.max(T))
 
-    cmap = mpl.cm.get_cmap("Greys")
+    # Some cmap
+    cmap = plt.cm.get_cmap("Greys")
 
     # Get a color for each value.
-    colors = [cmap(norm(val)) for val in list(T.flatten())]
+    tmp_color = [cmap(norm(val)) for val in list(T.flatten())]
 
     # Get coordinates.
     indices = np.indices(T.shape)
@@ -87,7 +91,7 @@ def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(5, 
 
     if colorbar:
         # Get color map
-        cm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         cm.set_array([])
 
         fig.colorbar(cm)
@@ -104,40 +108,40 @@ def plot_matrix(matrix, log=True, remove_diag=False, colorbar=True, figsize=(5, 
     else:
         s = y_pix ** 2
 
-    ax.scatter(x, y, c=colors, cmap='Greys', s=s, marker='s')
+    ax.scatter(x, y, c=tmp_color, cmap='Greys', s=s, marker='s')
 
     return fig, ax
 
 
 def plot_network(
-    network,
-    flux=None,
-    ax=None,
-    figsize=(15,10),
-    nodelist=[],
-    attribute="phenotypes",
-    vmin=None,
-    vmax=None,
-    cmap="YlOrRd",
-    cmap_truncate=False,
-    colorbar=False,
-    node_labels="genotypes",
-    edge_scalar=15.0,
-    edge_labels=False,
-    edge_color='k',
-    style='solid',
-    edge_alpha=1.0,
-    arrows=False,
-    arrowstyle='-|>',
-    arrowsize=10,
-    node_size=3000,
-    node_color='r',
-    node_shape='o',
-    alpha=1.0,
-    linewidths=0,
-    edgecolors="black",
-    label=None,
-    **kwds):
+        network,
+        flux=None,
+        ax=None,
+        figsize=(15, 10),
+        nodelist=[],
+        attribute="phenotypes",
+        vmin=None,
+        vmax=None,
+        cmap="YlOrRd",
+        cmap_truncate=False,
+        colorbar=False,
+        node_labels="genotypes",
+        edge_scalar=15.0,
+        edge_labels=False,
+        edge_color='k',
+        style='solid',
+        edge_alpha=1.0,
+        arrows=False,
+        arrowstyle='-|>',
+        arrowsize=10,
+        node_size=3000,
+        node_color='r',
+        node_shape='o',
+        alpha=1.0,
+        linewidths=0,
+        edgecolors="black",
+        label=None,
+        **kwds):
     """Draw the GenotypePhenotypeGraph using Matplotlib.
 
     Draw the graph with Matplotlib with options for node positions,
@@ -328,22 +332,22 @@ def plot_network(
         nx.draw_networkx_labels(network, pos=pos, labels=labels)
 
     if flux is not None:
-        edge_flux = {edge: round(flux[edge],2) for edge in edgelist}
+        edge_flux = {edge: round(flux[edge], 2) for edge in edgelist}
         # Draw edge labels
         if edge_labels:
             nx.draw_networkx_edge_labels(network, pos=pos, edge_labels=edge_flux,
-                                     label_pos=0.5, font_size=10, font_color='k',
-                                     font_family='sans-serif', font_weight='normal', alpha=1.0, bbox=None, ax=None,
-                                     rotate=True, **kwds)
+                                         label_pos=0.5, font_size=10, font_color='k',
+                                         font_family='sans-serif', font_weight='normal', alpha=1.0, bbox=None, ax=None,
+                                         rotate=True, **kwds)
 
     # Add a colorbar?
     if colorbar:
-        norm = mpl.colors.Normalize(
+        norm = colors.Normalize(
             vmin=vmin,
             vmax=vmax)
 
         # create a ScalarMappable and initialize a data structure
-        cm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         cm.set_array([])
         fig.colorbar(cm)
 
@@ -351,38 +355,38 @@ def plot_network(
 
 
 def plot_clusters(
-    network,
-    clusters,
-    xaxis='forward_committor',
-    yaxis='fitness',
-    flux=None,
-    ax=None,
-    figsize=(15,10),
-    nodelist=[],
-    cluster_scale=0.1,
-    attribute="phenotypes",
-    vmin=None,
-    vmax=None,
-    cmap="YlOrRd",
-    cmap_truncate=False,
-    colorbar=False,
-    node_labels="genotypes",
-    edge_scalar=15.0,
-    edge_color='k',
-    edge_labels=False,
-    style='solid',
-    edge_alpha=1.0,
-    arrows=False,
-    arrowstyle='-|>',
-    arrowsize=10,
-    node_size=3000,
-    node_color='r',
-    node_shape='o',
-    alpha=1.0,
-    linewidths=0,
-    edgecolors="black",
-    label=None,
-    **kwds):
+        network,
+        clusters,
+        xaxis='forward_committor',
+        yaxis='fitness',
+        flux=None,
+        ax=None,
+        figsize=(15, 10),
+        nodelist=[],
+        cluster_scale=0.1,
+        attribute="phenotypes",
+        vmin=None,
+        vmax=None,
+        cmap="YlOrRd",
+        cmap_truncate=False,
+        colorbar=False,
+        node_labels="genotypes",
+        edge_scalar=15.0,
+        edge_color='k',
+        edge_labels=False,
+        style='solid',
+        edge_alpha=1.0,
+        arrows=False,
+        arrowstyle='-|>',
+        arrowsize=10,
+        node_size=3000,
+        node_color='r',
+        node_shape='o',
+        alpha=1.0,
+        linewidths=0,
+        edgecolors="black",
+        label=None,
+        **kwds):
     """Draw the GenotypePhenotypeGraph using Matplotlib.
 
     Draw the graph with Matplotlib with options for node positions,
@@ -583,24 +587,22 @@ def plot_clusters(
         # Draw edge labels
         if edge_labels:
             nx.draw_networkx_edge_labels(network, pos=pos, edge_labels=edgeflux,
-                                     label_pos=0.5, font_size=10, font_color='k',
-                                     font_family='sans-serif', font_weight='normal', alpha=1.0, bbox=None, ax=None,
-                                     rotate=True, **kwds)
+                                         label_pos=0.5, font_size=10, font_color='k',
+                                         font_family='sans-serif', font_weight='normal', alpha=1.0, bbox=None, ax=None,
+                                         rotate=True, **kwds)
 
     # Add a colorbar?
     if colorbar:
-        norm = mpl.colors.Normalize(
+        norm = colors.Normalize(
             vmin=vmin,
             vmax=vmax)
 
         # create a ScalarMappable and initialize a data structure
-        cm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         cm.set_array([])
         fig.colorbar(cm)
 
     return fig, ax
-
-
 
 # def plot_clusters(network, clusters, scale=1, figsize=(10,10)):
 #     print(clusters)

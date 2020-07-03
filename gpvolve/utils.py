@@ -1,8 +1,7 @@
-from scipy.sparse.csgraph import shortest_path
 import networkx as nx
-from scipy.sparse import csr_matrix
 import numpy as np
-import itertools
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import shortest_path
 
 
 def get_sub_paths(paths, start, end):
@@ -95,7 +94,7 @@ def find_max(gpmsm, nodes=None, attribute='fitness'):
     """
     if not isinstance(nodes, list) or isinstance(nodes, np.ndarray):
         nodes = list(gpmsm.nodes)
-    idx = np.argmax(np.array([gpmsm.node[node][attribute] for node in nodes]))
+    idx = np.argmax(np.array([gpmsm.nodes[node][attribute] for node in nodes]))
     max_node = nodes[idx]
 
     return max_node

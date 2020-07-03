@@ -54,7 +54,7 @@ class GenotypePhenotypeClusters(object):
             self.cluster_reps = [find_max(self.gpmsm, cluster) for cluster in self.clusters]
 
         # Get all attributes of the representative nodes
-        values = {i: self.gpmsm.node[node] for i, node in enumerate(self.cluster_reps)}
+        values = {i: self.gpmsm.nodes[node] for i, node in enumerate(self.cluster_reps)}
         nx.set_node_attributes(self.network, values)
 
     @property

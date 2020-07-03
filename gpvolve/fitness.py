@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def linear_skew(phenotypes, selection_gradient):
     """Transforms the phenotype data to match the given selection gradient and stores them as gpm.data.phenotypes.
 
@@ -15,7 +16,7 @@ def linear_skew(phenotypes, selection_gradient):
     """
 
     ### USE NUMPY SYNTAX TO SPEED UP. INPUT SHOULD BE NUMPY ARRAY ANYWAY ###
-    b = 1/selection_gradient - 1
+    b = 1 / selection_gradient - 1
     fitness = [ph_ + b for ph_ in phenotypes]
     max_fit = max(fitness)
     # Normalize to 1
@@ -41,7 +42,7 @@ def exponential(phenotypes, exponent=1.):
     """
     fitnesses = phenotypes.copy()
     # Raising 0 phenotypes to a power will result in NaN, hence we change any NaN to 0.
-    fitnesses = np.nan_to_num(fitnesses**exponent)
+    fitnesses = np.nan_to_num(fitnesses ** exponent)
 
     return fitnesses
 

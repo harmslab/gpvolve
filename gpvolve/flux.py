@@ -1,6 +1,5 @@
 from msmtools.flux import tpt
-import networkx as nx
-from scipy.sparse import dok_matrix
+
 
 def paths_prob_to_edges_flux(paths_prob):
     """Chops a list of paths into its edges, and calculate the probability
@@ -19,9 +18,9 @@ def paths_prob_to_edges_flux(paths_prob):
     edge_flux = {}
     for path, prob in paths_prob.items():
         edges = []
-        for i in range(len(path)-1):
+        for i in range(len(path) - 1):
             # Get edge
-            edges.append((path[i], path[i+1]))
+            edges.append((path[i], path[i + 1]))
 
         # If paths loop over same pair of states multiple times per path, the probability shouldnt be summed.
         uniq_edges = set(edges)
@@ -76,6 +75,7 @@ class TransitionPathTheory(object):
     [1] http://www.emma-project.org/v2.2.7/api/generated/msmtools.flux.tpt.html
 
     """
+
     def __init__(self, EvoMSM, source, target):
         self.msm = EvoMSM
         self.source = source

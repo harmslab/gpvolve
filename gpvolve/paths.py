@@ -1,10 +1,8 @@
-from msmtools.flux import pathways as pw
-from gpmap.utils import hamming_distance
-from .utils import combinations, path_prob, rm_self_prob, add_self_probability, euclidean_distance
-
 import networkx as nx
 import numpy as np
-import warnings
+from msmtools.flux import pathways as pw
+
+from .utils import combinations, path_prob, rm_self_prob, add_self_probability, euclidean_distance
 
 
 def flux_decomp(flux_matrix, source, target, fraction=1, maxiter=1000):
@@ -14,6 +12,7 @@ def flux_decomp(flux_matrix, source, target, fraction=1, maxiter=1000):
     pathways = {tuple(path[0]): path[1] for path in zip(paths, capacities)}
 
     return pathways
+
 
 def exhaustive_enumeration(graph, source, target, edge_attr, normalize=False, rm_diag=False):
     """Calculate the probabiliy of all forward paths between source and target
@@ -47,7 +46,8 @@ def exhaustive_enumeration(graph, source, target, edge_attr, normalize=False, rm
     """
     # Check arguments.
     if edge_attr == 'weight':
-        print("If edge_attr='weight', the transition matrix might be a simple adjacency matrix, unless 'weight' is an explicitly defined edge attribute of your DiGraph.")
+        print(
+            "If edge_attr='weight', the transition matrix might be a simple adjacency matrix, unless 'weight' is an explicitly defined edge attribute of your DiGraph.")
 
     # Get all possible paths between all possible pairs of source and target nodes.
     all_paths = []
@@ -74,9 +74,10 @@ def exhaustive_enumeration(graph, source, target, edge_attr, normalize=False, rm
         # Normalize, i.e. divide by the sum of all path probabilities.
         p_sum = sum(path_probs.values())
         for path, prob in path_probs.items():
-            path_probs[path] = prob/p_sum
+            path_probs[path] = prob / p_sum
 
     return path_probs
+
 
 def greedy(T, source=None):
     """Find the 'greedy' path from source to the nearest peak. Always make step with highest probability.
@@ -113,7 +114,8 @@ def greedy(T, source=None):
     return path
 
 
-def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, conv_crit=0.01, r_seed=None, out='frac', rm_diag=False, mute=False):
+def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, conv_crit=0.01, r_seed=None, out='frac',
+                  rm_diag=False, mute=False):
     """Stochastic path sampling. Probability of making a step equals its fixation probability
 
     Parameters
@@ -216,15 +218,17 @@ def path_sampling(Tm, source=None, target=None, max_iter=None, interval=None, co
 
             elif out == 'frac':
                 count_sum = sum(paths.values())
-                paths_at_intervals[counter] = {path: counts/count_sum for path, counts in paths.items()}
+                paths_at_intervals[counter] = {path: counts / count_sum for path, counts in paths.items()}
 
                 # Use the euclidean distance between two probability mass functions as convergence proxy.
                 conv_metric = euclidean_distance(paths_at_intervals[counter - interval], paths_at_intervals[counter])
 
                 if conv_metric < conv_crit:
                     if not mute:
-                        print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
+                        print("Converged after %s iterations. Euclidean distance: %s Convergence criterion: %s" % (
+                        counter, conv_metric, conv_crit))
                     return paths_at_intervals[counter], paths_at_intervals
 
-    print("Did not converge after %s iterations. Last eucl. distance: %s Convergence criterion: %s" % (counter, conv_metric, conv_crit))
+    print("Did not converge after %s iterations. Last eucl. distance: %s Convergence criterion: %s" % (
+    counter, conv_metric, conv_crit))
     return paths_at_intervals[counter], paths_at_intervals

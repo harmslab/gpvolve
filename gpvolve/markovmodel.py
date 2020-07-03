@@ -1,10 +1,11 @@
-from gpgraph import GenotypePhenotypeGraph
-from .utils import add_self_probability
-import msmtools.analysis as mana
-
 import warnings
 import networkx as nx
 import numpy as np
+from gpgraph import GenotypePhenotypeGraph
+from msmtools.analysis import is_connected, is_reversible, eigenvalues, eigenvectors, is_transition_matrix, timescales, \
+    stationary_distribution
+from .utils import add_self_probability
+
 
 class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
     """Class for building and analyzing evolutionary markov state models
@@ -32,6 +33,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         Fitness peaks. A fitness peak is defined as nodes with a fitness higher than all its neighboring nodes.
 
     """
+
     def __init__(self, gpm, *args, **kwargs):
         super().__init__(gpm, *args, **kwargs)
 
@@ -53,6 +55,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         self._forward_committor = None
         self._backward_committor = None
 
+        # Get back
 
     def apply_selection(self, fitness_function, **params):
         """Compute fitness values from a user-defined phenotype-fitness function. A few basic functions can be found in
@@ -95,11 +98,11 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         nodepairs = list(zip(*self.edges))  # [(1, 4), (5, 8), (10, 25)] -> [(1, 5, 10), (4, 8, 25)]
 
         # Get fitnesses of all nodes.
-        fitness1 = np.array([self.node[node]['fitness'] for node in nodepairs[0]])
-        fitness2 = np.array([self.node[node]['fitness'] for node in nodepairs[1]])
+        fitness1 = np.array([self.nodes[node]['fitness'] for node in nodepairs[0]])
+        fitness2 = np.array([self.nodes[node]['fitness'] for node in nodepairs[1]])
 
         # Probability of a certain site mutating in a certain genotype when all sites have equal mutation probability.
-        mutation_prob = np.array([1/len(list(self.neighbors(node))) for node in nodepairs[0]])
+        mutation_prob = np.array([1 / len(list(self.neighbors(node))) for node in nodepairs[0]])
         # mutation_prob = np.array(1 / nx.adjacency_matrix(self).sum(axis=0))[0]  # number of neighbors, exclude
 
         # Compute transition probability and get edge keys.
@@ -116,7 +119,6 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         diag_indices = np.diag_indices(self.transition_matrix.shape[0])
         diag_vals = self.transition_matrix[diag_indices]
         nx.set_edge_attributes(self, name="transition_probability", values=dict(zip(self.self_edges, diag_vals)))
-
 
     def peaks(self):
         """Find nodes without neighbors of higher fitness. Equal fitness allowed.
@@ -146,7 +148,10 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
                     peak_list.append(node)
 
             # Find connected peaks.
-            peak_graph = self.subgraph(peak_list)
+            new = nx.graph.Graph()
+            new.add_nodes_from(peak_list)
+            new.add_edges_from(self.edges)
+            peak_graph = new.subgraph(peak_list)
             peaks = list(nx.connected_components(peak_graph.to_undirected()))
             self._peaks = peaks
 
@@ -190,7 +195,6 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
 
         return peaks
 
-
     def step_function(self):
         """A function that bins phenotypes and allows one to define neutral networks in g-p-maps with continuous
         phenotypes
@@ -209,7 +213,8 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
             return self._transition_matrix
         else:
             try:
-                self._transition_matrix = np.array(nx.attr_matrix(self, edge_attr="transition_probability", normalized=False)[0])
+                self._transition_matrix = np.array(
+                    nx.attr_matrix(self, edge_attr="transition_probability", normalized=False)[0])
             except KeyError:
                 print("Transition matrix doesn't exit yet. Add fixation probabilities first.")
 
@@ -223,10 +228,10 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
             Transition matrix. Should be row stochastic and ergodic.
         """
         # Check transition matrix.
-        if mana.is_transition_matrix(T):
-            if not mana.is_reversible(T):
+        if is_transition_matrix(T):
+            if not is_reversible(T):
                 warnings.warn("The transition matrix is not reversible.")
-            if not mana.is_connected(T):
+            if not is_connected(T):
                 warnings.warn("The transition matrix is not connected.")
         else:
             warnings.warn("Not a transition matrix. Has to be square and rows must sum to one.")
@@ -240,7 +245,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         if stat_dist:
             return stat_dist
         else:
-            stat_dist = {node: prob for node, prob in enumerate(mana.stationary_distribution(self.transition_matrix))}
+            stat_dist = {node: prob for node, prob in enumerate(stationary_distribution(self.transition_matrix))}
             nx.set_node_attributes(self, name="stationary_distribution", values=stat_dist)
 
             return nx.get_node_attributes(self, name="stationary_distribution")
@@ -259,7 +264,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         if isinstance(self._timescales, np.ndarray):
             return self._timescales
         else:
-            self._timescales = mana.timescales(self.transition_matrix)
+            self._timescales = timescales(self.transition_matrix)
             return self._timescales
 
     @timescales.setter
@@ -272,7 +277,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         if isinstance(self._eigenvalues, np.ndarray):
             return self._eigenvalues
         else:
-            self._eigenvalues = mana.eigenvalues(self.transition_matrix)
+            self._eigenvalues = eigenvalues(self.transition_matrix)
             return self._eigenvalues
 
     @eigenvalues.setter
@@ -285,7 +290,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         if isinstance(self._eigenvectors, np.ndarray):
             return self._eigenvectors
         else:
-            self._eigenvectors = mana.eigenvectors(self.transition_matrix)
+            self._eigenvectors = eigenvectors(self.transition_matrix)
             return self._eigenvectors
 
     @eigenvectors.setter
@@ -345,7 +350,7 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
         committor : 1D numpy.ndarray.
             Committor values in order of transition matrix.
         """
-        committor = mana.committor(T, source, target, forward=forward)
+        committor = committor(T, source, target, forward=forward)
         return committor
 
     # @property
@@ -382,7 +387,6 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
     #     else:
     #         raise Exception("Target has to be a list of at least one genotype(type=str) or node(type=int)")
 
-
     # def peaks_(self):
     #     """
     #     A node is defined as peak if it has no neighbor (hamming_distance=1) with a higher fitness (identical
@@ -414,6 +418,3 @@ class GenotypePhenotypeMSM(GenotypePhenotypeGraph):
     #     peaks = list(nx.connected_components(peak_graph.to_undirected()))
     #
     #     return peaks
-
-
-

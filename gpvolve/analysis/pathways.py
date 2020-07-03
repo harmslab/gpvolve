@@ -76,7 +76,7 @@ def mean_path_divergence(G, paths):
                 npairs = zip(a, other_path)
                 for npair in npairs:
                     # Get hamming distance
-                    ppair_hdist += hamming_distance(G.node[npair[0]]["binary"], G.node[npair[1]]["binary"])
+                    ppair_hdist += hamming_distance(G.nodes[npair[0]]["binary"], G.nodes[npair[1]]["binary"])
 
         # Distance between paths.
         ppair_dist = ppair_hdist / l
@@ -86,7 +86,6 @@ def mean_path_divergence(G, paths):
         divergence += ppair_dist * path_probs[0] * path_probs[1]
 
     return divergence
-
 
 
 def adaptive_paths(paths, fitnesses):
@@ -229,12 +228,8 @@ def fraction_of_paths(paths_dict, fraction=1.):
 
         # Enough paths to reach fraction?
         if probsum >= fraction:
-            new_dict = dict(zip(sorted_paths[:i+1], sorted_probs[:i+1]))
+            new_dict = dict(zip(sorted_paths[:i + 1], sorted_probs[:i + 1]))
             return new_dict
     # Not enough paths in whole dictionary to reach fraction.
     new_dict = paths_dict
     return new_dict
-
-
-
-

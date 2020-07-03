@@ -38,8 +38,8 @@ phenotypes = [0.8, 0.81, 0.88, 0.89, 0.82, 0.82, 0.95, 1.0]
 
 # Instantiate Markov model class.
 gpm = GenotypePhenotypeMap(wildtype=wildtype,
-                            genotypes=genotypes,
-                            phenotypes=phenotypes)
+                           genotypes=genotypes,
+                           phenotypes=phenotypes)
 
 
 # Instantiate a evolutionary Markov State Model from the genotype-phenotype map.
@@ -68,9 +68,9 @@ norm_fluxes = fluxes.net_flux/fluxes.total_flux
 
 # Plot the network and the fluxes
 fig, ax = plot_network(gpmsm,
-                        flux=dok_matrix(norm_fluxes),
-                        edge_labels=True,
-                        colorbar=True)
+                       flux=dok_matrix(norm_fluxes),
+                       edge_labels=True,
+                       colorbar=True)
 
 ```
 
