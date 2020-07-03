@@ -73,7 +73,7 @@ fig, ax = plot_network(gpmsm,
                        colorbar=True)
 
 ```
-<img src="docs/img/basic_example.png" width="350">
+<img src="docs/img/basic_example.png" width="700">
 
 
 ## Install
