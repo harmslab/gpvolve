@@ -1,3 +1,4 @@
+-i https://pypi.org/simple
 matplotlib>=3.2.2
 numpy>=1.15.2
 pandas>=0.24.2
