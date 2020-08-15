@@ -1,9 +1,9 @@
-matplotlib
+matplotlib>=3.2.2
 numpy>=1.15.2
 pandas>=0.24.2
 pytest>=3.8.1
 cython>=0.29.20
 msmtools>=1.2.5
-networkx==2.4.0
+networkx==2.4
 gpmap>=0.7.0
 gpgraph>=0.2.0
