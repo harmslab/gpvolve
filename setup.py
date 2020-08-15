@@ -18,7 +18,7 @@ URL = 'https://github.com/harmslab/gpvolve'
 EMAIL = 'l.d.goldbach@students.uu.nl'
 AUTHOR = 'Leander D. Goldbach'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = None
+VERSION = 0.2.0
 
 # What packages are required for this module to be executed?
 REQUIRED = ['numpy', 'cython', 'networkx',
