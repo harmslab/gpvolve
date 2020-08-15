@@ -1,10 +1,11 @@
 # gpvolve
 
-*A python package for extracting tevolutionary trajectories from genotype-phenotype-maps*
-
-[![](https://img.shields.io/pypi/v/gpvolve.svg)](https://pypi.python.org/pypi/gpvolve)
+[![PyPI version](https://badge.fury.io/py/gpvolve.svg)](https://badge.fury.io/py/gpvolve)
 [![](https://readthedocs.org/projects/gpvolve/badge/?version=latest)](https://gpvolve.readthedocs.io/en/latest/?badge=latest)
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/harmslab/gpvolve/blob/master/examples/Introduction%20to%20gpvolve.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)]([![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/harmslab/gpvolve/master?filepath=examples%2FIntroduction%20to%20gpvolve.ipynb))
 
+**A python package for extracting evolutionary trajectories from genotype-phenotype-maps**
 
 A Python API for the simulation and analysis of evolution in genotype-phenotype space.
 You can use this library to:
