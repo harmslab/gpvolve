@@ -1,7 +1,6 @@
 name: gpvolve-kernel
 dependencies:
 - python==3.6
-- anaconda
 - pip
 - pip:
   - matplotlib
