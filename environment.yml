@@ -1,9 +1,0 @@
-name: gpvolve-kernel
-dependencies:
-- python==3.6
-- pip
-- pip:
-  - matplotlib
-  - gpmap
-  - gpgraph
-  - gpvolve
