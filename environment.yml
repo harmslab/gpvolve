@@ -1,0 +1,10 @@
+name: gp-environment
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - matplotlib
+  - pip
+  - pip:
+    - gpmap
+    - gpgraph
