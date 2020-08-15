@@ -7,5 +7,5 @@ from .fitness import *
 from .fixation import *
 from .flux import *
 from .paths import *
-from .cluster import *
 from .analysis import *
+from gpvolve.cluster import *
